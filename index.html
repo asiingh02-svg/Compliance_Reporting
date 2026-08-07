@@ -245,12 +245,26 @@
   // BACKEND CONNECTION (GitHub Pages -> Apps Script API)
   // ============================================
   var BACKEND_URL = 'https://script.google.com/macros/s/AKfycbyEI52dEGXM1LXvQ42Z-R9eVKuWliv-Lve1uxGDc3llgQ6qolJtM04H60G2dazYQyA/exec';
+  var SHARED_SECRET = 'f3a9c1d8e2b7a4f6c9d3e8b1a5f2c7d4e9b6a3f8c1d5e2b9a6f3c8d1e4b7a2f9';
+
+  function hmacSignRequest(message) {
+    var enc = new TextEncoder();
+    return crypto.subtle.importKey('raw', enc.encode(SHARED_SECRET), {name:'HMAC', hash:'SHA-256'}, false, ['sign'])
+      .then(function(key){ return crypto.subtle.sign('HMAC', key, enc.encode(message)); })
+      .then(function(sigBuffer){
+        return Array.from(new Uint8Array(sigBuffer)).map(function(b){ return b.toString(16).padStart(2,'0'); }).join('');
+      });
+  }
 
   function callBackend(action, params) {
-    return fetch(BACKEND_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action: action, params: params || [] })
+    var timestamp = Date.now().toString();
+    var message = action + '|' + timestamp;
+    return hmacSignRequest(message).then(function(signature) {
+      return fetch(BACKEND_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: action, params: params || [], timestamp: timestamp, signature: signature })
+      });
     })
     .then(function(r) { return r.json(); })
     .then(function(r) {
