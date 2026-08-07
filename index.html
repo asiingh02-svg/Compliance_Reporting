@@ -29,7 +29,8 @@
 
   #dashboard { display:none; min-height:100vh; }
 
-  #appHeader { background:white; border-bottom:1px solid #e8eaed; padding:12px 28px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; box-shadow:0 2px 8px rgba(0,0,0,.06); flex-wrap:wrap; gap:10px; }
+    #stickyTop { position:sticky; top:0; z-index:200; background:white; }
+  #appHeader { background:white; border-bottom:1px solid #e8eaed; padding:12px 28px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
   #headerLeft { display:flex; align-items:center; gap:14px; }
   #userAvatar { width:42px; height:42px; border-radius:50%; background:linear-gradient(135deg,#4285F4,#6a1b9a); display:flex; align-items:center; justify-content:center; color:white; font-size:15px; font-weight:700; flex-shrink:0; box-shadow:0 3px 8px rgba(66,133,244,.3); }
   #headerGreeting { font-size:15px; font-weight:700; color:#202124; line-height:1.2; }
@@ -111,6 +112,9 @@
 
   .badge { padding:3px 10px; border-radius:12px; font-weight:700; font-size:11px; color:white; white-space:nowrap; display:inline-block; margin:1px 0; letter-spacing:.2px; }
   .badge-overdue { background:#d93025; } .badge-soon { background:#f9ab00; } .badge-ok { background:#188038; } .badge-legacy { background:#777; }
+    .statusEmoji { font-size:15px; cursor:help; margin:0 1px; }
+  .legendRow { display:flex; gap:14px; flex-wrap:wrap; align-items:center; font-size:12px; color:#444; }
+  .legendRow span { display:flex; align-items:center; gap:4px; }
   .yn-yes { display:inline-block; background:#188038; color:white; border-radius:6px; padding:2px 8px; font-size:11px; font-weight:700; }
   .yn-no { display:inline-block; background:#d93025; color:white; border-radius:6px; padding:2px 8px; font-size:11px; font-weight:700; }
 
@@ -141,6 +145,19 @@
   .helperText-bold { font-weight:700; color:#202124; }
   .reviewStatusBox { background:white; border:1px solid #e8eaed; border-radius:12px; padding:16px; margin-bottom:16px; box-shadow:0 1px 3px rgba(0,0,0,.05); }
   .exportBtnStyle { width:auto; padding:7px 14px; border-radius:8px; font-size:12px; font-weight:600; margin:0; box-shadow:none; }
+
+    #botBubble { position:fixed; bottom:24px; right:24px; width:60px; height:60px; border-radius:50%; background:linear-gradient(135deg,#4285F4,#6a1b9a); color:white; font-size:30px; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 16px rgba(0,0,0,.3); cursor:pointer; z-index:9998; border:3px solid white; transition:transform .15s; }
+  #botBubble:hover { transform:scale(1.08); }
+  #botWindow { display:none; flex-direction:column; position:fixed; bottom:90px; right:24px; width:340px; max-height:480px; background:white; border-radius:14px; box-shadow:0 8px 30px rgba(0,0,0,.25); z-index:9998; overflow:hidden; }
+  #botHeader { background:linear-gradient(135deg,#4285F4,#6a1b9a); color:white; padding:12px 16px; font-weight:700; font-size:14px; display:flex; justify-content:space-between; align-items:center; }
+  #botCloseBtn { cursor:pointer; }
+  #botMessages { flex:1; overflow-y:auto; padding:12px; font-size:13px; background:#f7f8fc; max-height:360px; }
+  .botMsg { margin-bottom:10px; max-width:85%; padding:8px 12px; border-radius:10px; line-height:1.4; }
+  .botMsg-user { background:#4285F4; color:white; margin-left:auto; border-bottom-right-radius:2px; }
+  .botMsg-bot { background:white; border:1px solid #e0e0e0; margin-right:auto; border-bottom-left-radius:2px; }
+  .botSuggestion { display:block; background:#e8f0fe; color:#1a56c4; border:1px solid #c5cfe8; border-radius:8px; padding:6px 10px; margin-top:6px; font-size:12px; cursor:pointer; text-align:left; }
+  #botInputRow { display:flex; gap:6px; padding:10px; border-top:1px solid #e8eaed; }
+  #botInputRow input { margin:0; }
 
   @media (max-width:768px) {
     #appHeader, #navWrapper { padding-left:16px; padding-right:16px; }
@@ -186,6 +203,7 @@
 </div>
 
 <div id="dashboard">
+  <div id="stickyTop">
   <div id="appHeader">
     <div id="headerLeft">
       <div id="userAvatar"></div>
@@ -201,6 +219,7 @@
     </div>
   </div>
   <div id="navWrapper"><div id="moduleNav"></div></div>
+  </div>
   <div id="pageContent">
     <div id="moduleTitle"></div>
     <div id="moduleStatusContainer"></div>
@@ -208,6 +227,16 @@
     <div id="formContainer"></div>
     <div id="comparisonContainer"></div>
     <div id="tableContainer"></div>
+  </div>
+</div>
+
+<div id="botBubble" onclick="toggleBotWindow()">👩‍🏫</div>
+<div id="botWindow">
+  <div id="botHeader">👩‍🏫 Sunshine — Your App Trainer <span id="botCloseBtn" onclick="toggleBotWindow()">✕</span></div>
+  <div id="botMessages"></div>
+  <div id="botInputRow">
+    <input type="text" id="botInput" placeholder="Ask me anything about this app..." onkeypress="if(event.key==='Enter') sendBotMessage();">
+    <button onclick="sendBotMessage()" style="width:auto;padding:8px 14px;">Send</button>
   </div>
 </div>
 
@@ -290,6 +319,17 @@
   function buildTable(headers, rowsHtml, extraAttrs) {
     return "<table"+(extraAttrs||"")+"><thead><tr>"+headers.map(function(h){return "<th>"+h+"</th>";}).join("")+"</tr></thead><tbody>"+rowsHtml.join("")+"</tbody></table>";
   }
+  function buildReviewMatrixTable(headers, rowsHtml) {
+    var numStatusCols = headers.length - 1;
+    var centrePct = 18;
+    var colPct = (100 - centrePct) / numStatusCols;
+    var colgroup = "<colgroup><col style='width:"+centrePct+"%;min-width:120px;'>";
+    for (var i=1; i<headers.length; i++) colgroup += "<col style='width:"+colPct+"%;min-width:55px;'>";
+    colgroup += "</colgroup>";
+    return "<table style='table-layout:fixed;width:100%;' data-autosized='1'>"+colgroup+
+      "<thead><tr>"+headers.map(function(h){return "<th>"+h+"</th>";}).join("")+"</tr></thead>"+
+      "<tbody>"+rowsHtml.join("")+"</tbody></table>";
+  }
 
   var HEADER_TYPE_PATTERNS = {
     date:    /date|ending|updated|raised|notified|completed|declared|review date/i,
@@ -340,33 +380,54 @@
     if (existing) existing.remove();
     var cg = document.createElement('colgroup');
     var noWrapCols = [];
+    var colWidths = [];
 
     for (var c2=0; c2<numCols; c2++) {
       var hint = headerHints[c2];
-      var w, isNoWrap=false;
-      if (hint) { w=hint.w; isNoWrap=hint.noWrap; }
-      else {
+      var w, isNoWrap=false, isFixed=true;
+      if (hint) {
+        w=hint.w; isNoWrap=hint.noWrap;
+        // "large" text columns (Wins, Notes, Description, etc.) should flex
+        // to absorb leftover space rather than being pinned to a fixed width.
+        if (hint.wrap) isFixed=false;
+      } else {
         var l = maxLens[c2];
         if(l<=6){w=55;isNoWrap=true;}else if(l<=10){w=80;isNoWrap=true;}else if(l<=16){w=115;isNoWrap=true;}
-        else if(l<=24){w=160;}else if(l<=36){w=220;}else if(l<=60){w=310;}else{w=400;}
+        else if(l<=24){w=160;}else if(l<=36){w=220;}else if(l<=60){w=310;}else{w=400;isFixed=false;}
       }
       if (isNoWrap) noWrapCols.push(c2);
+      colWidths.push(w);
       var col = document.createElement('col');
-      col.style.width = w+'px'; col.style.minWidth = w+'px';
+      if (isFixed) { col.style.width = w+'px'; col.style.minWidth = w+'px'; }
+      else { col.style.minWidth = w+'px'; }
       cg.appendChild(col);
     }
     tableEl.insertBefore(cg, tableEl.firstChild);
 
+    // table-layout:fixed makes the browser strictly honour <col> widths
+    // instead of stretching columns to fit content. width:100% ensures
+    // the table still fills the full page — any extra space beyond the
+    // sum of fixed-width columns gets distributed to flexible columns
+    // (since only narrow columns get an explicit width; wide/text columns
+    // are left to flex and absorb the remaining space).
+    tableEl.style.tableLayout = 'fixed';
+    tableEl.style.width = '100%';
+
     for (var c3=0; c3<numCols; c3++) {
       var nw = noWrapCols.indexOf(c3)!==-1;
-      var hintC = headerHints[c3];
-      var shouldWrap = hintC ? hintC.wrap : !nw;
       for (var r2=0; r2<rows.length; r2++) {
         var cell = rows[r2].cells[c3];
         if (!cell) continue;
-        cell.style.whiteSpace = nw ? 'nowrap' : 'pre-wrap';
-        cell.style.wordBreak = nw ? 'normal' : 'break-word';
-        if (shouldWrap) { cell.style.whiteSpace='pre-wrap'; cell.style.wordBreak='break-word'; }
+        if (r2 === 0) {
+          // Header row: ALWAYS wrap, regardless of column data type.
+          // A header like "Promotional Marketing" must wrap onto multiple
+          // lines even when its column is narrow (holding just Y/N values).
+          cell.style.whiteSpace = 'normal';
+          cell.style.wordBreak = 'break-word';
+        } else {
+          cell.style.whiteSpace = nw ? 'nowrap' : 'pre-wrap';
+          cell.style.wordBreak = nw ? 'normal' : 'break-word';
+        }
       }
     }
     tableEl.dataset.autosized = '1';
@@ -799,18 +860,27 @@
   function renderStatusBox(sheetName,centres,statusForSheet) {
     centres=safeArray(centres); statusForSheet=statusForSheet||{};
     var isDirector=(currentUser.role==='Director'), isOversight=isOversightRole();
+    var legend = "<div class='legendRow' style='margin-bottom:10px;'>" +
+      "<span><span class='statusEmoji'>✅</span> Reviewed</span>" +
+      "<span><span class='statusEmoji'>⚠️</span> Pending Director Review</span>" +
+      "<span><span class='statusEmoji'>🔺</span> Pending Manager/AP Review</span></div>";
     var rows=centres.map(function(c){
       var s=statusForSheet[c.id]||{};
       var updatedText = s.updated ? (s.updated.date+" by "+s.updated.user) : (s.legacy?"<em>Legacy data</em>":"No submissions yet");
-      var selfCell=buildReviewCell(s.selfReview,s.selfPending,s.hasActivity,isDirector,sheetName,c.id,'Director');
-      var oversightCell=buildReviewCell(s.oversightReview,s.oversightPending,s.hasActivity,isOversight,sheetName,c.id,currentUser.role);
+      var selfCell=buildReviewCell(s.selfReview,s.selfPending,s.hasActivity,isDirector,sheetName,c.id,'Director','director');
+      var oversightCell=buildReviewCell(s.oversightReview,s.oversightPending,s.hasActivity,isOversight,sheetName,c.id,currentUser.role,'manager');
       return "<tr><td>"+c.name+"</td><td>"+updatedText+"</td><td>"+selfCell+"</td><td>"+oversightCell+"</td></tr>";
     });
-    return "<div class='reviewStatusBox'>"+buildTable(["Centre","Last Updated","Director Self-Review","Manager / AP Review"],rows)+"</div>";
+    return "<div class='reviewStatusBox'>"+legend+buildTable(["Centre","Last Updated","Director Self-Review","Manager / AP Review"],rows)+"</div>";
   }
 
-  function buildReviewCell(reviewEntry,isPending,hasActivity,canAct,sheetName,centreId,actingRole) {
-    var badge = hasActivity ? (isPending?"<span class='badge badge-soon'>⚠️ PENDING</span>":"<span class='badge badge-ok'>✅ REVIEWED</span>") : "<span style='color:#999;'>—</span>";
+  function buildReviewCell(reviewEntry,isPending,hasActivity,canAct,sheetName,centreId,actingRole,columnType) {
+    var pendingSymbol = (columnType === 'director') ? "⚠️" : "🔺";
+    var badge = !hasActivity
+      ? "<span class='statusEmoji' style='color:#8b0000;font-weight:700;' title='No activity yet'>❓</span>"
+      : (isPending
+          ? "<span class='statusEmoji' title='Pending Review'>"+pendingSymbol+"</span> <span class='badge badge-soon'>PENDING</span>"
+          : "<span class='statusEmoji' title='Reviewed'>✅</span> <span class='badge badge-ok'>REVIEWED</span>");
     var reviewedText = reviewEntry ? (reviewEntry.date+" by "+reviewEntry.user) : "Not yet reviewed";
     var html="<div>"+badge+"<br><small style='color:#666;'>"+reviewedText+"</small>";
     if(canAct){
@@ -1112,10 +1182,29 @@
     callBackend('setCentreStatus',[currentUser.token,centreId,newStatus]).then(function(result){ alert(result); loadUserMgmtModule(); }).catch(function(e){ handleAuthError(e); });
   }
 
+    function renderReviewCell(st) {
+    if (!st || !st.hasActivity) return "<span class='statusEmoji' style='color:#8b0000;font-weight:700;' title='No activity yet'>❓</span>";
+    var dPending = st.selfPending, mPending = st.oversightPending;
+    var tooltip = "Director: " + (dPending ? "Pending" : "Reviewed") + " | AP/AM: " + (mPending ? "Pending" : "Reviewed");
+
+    if (!dPending && !mPending) return "<span class='statusEmoji' title='" + tooltip + "'>✅</span>";
+
+    if (dPending && mPending) {
+      var daysSinceUpdated = st.updated ? Math.floor((new Date() - new Date(st.updated.date)) / 86400000) : 999;
+      if (daysSinceUpdated >= 7) {
+        return "<span class='statusEmoji' title='" + tooltip + " — overdue " + daysSinceUpdated + " days'>🔴🔻</span>";
+      }
+      return "<span class='statusEmoji' title='" + tooltip + "'>⚠️🔺</span>";
+    }
+
+    if (dPending) return "<span class='statusEmoji' title='" + tooltip + "'>⚠️</span>";
+    return "<span class='statusEmoji' title='" + tooltip + "'>🔺</span>";
+  }
+
   function renderDashboardData(data) {
     try {
-      if(!data||data.error){ document.getElementById('tableContainer').innerHTML="<p class='errorMsg'>❌ "+(data&&data.error?data.error:"Unknown error.")+"</p>"; return; }
-      var records=data.records||{}, flags=[], centres=safeArray(data.centres);
+      if (!data || data.error) { document.getElementById('tableContainer').innerHTML = "<p class='errorMsg'>❌ " + (data && data.error ? data.error : "Unknown error.") + "</p>"; return; }
+      var records = data.records || {}, flags = [], centres = safeArray(data.centres);
 
       safeArray(records["Compliance_Certificates_Renewals"]).forEach(function(r){ var st=computeComplianceStatus(r); if(st.urgency==="overdue"||st.urgency==="soon") flags.push({centre:r["Centre Name"],category:"Compliance Certificate",detail:r["Item"]+" — Next Due "+st.nextDueDisplay,urgency:st.urgency}); });
       safeArray(records["Complaints_Register"]).forEach(function(r){ if((r["Status"]||"").toLowerCase()!=="closed"&&r["Status"]) flags.push({centre:r["Centre Name"],category:"Open Complaint",detail:(r["Issue Number"]?r["Issue Number"]+": ":"")+(r["Description of Complaint"]||"")+" ("+r["Status"]+")",urgency:"soon"}); });
@@ -1132,71 +1221,250 @@
       var latestWeekly=null, latestWeeklyDate=null;
       safeArray(records["Weekly_Report"]).forEach(function(r){ if(r["Week Ending"]){ var d=new Date(r["Week Ending"]); if(!latestWeeklyDate||d>latestWeeklyDate){latestWeeklyDate=d;latestWeekly=r;} } });
 
-      var html="";
-      html+="<div class='card' style='border-left:4px solid "+(flags.length===0?"#188038":"#d93025")+";'>";
-      html+="<div class='card-title'>"+(flags.length===0?"✅":"🔴")+" Needs Your Action"+(flags.length>0?" ("+flags.length+")":"")+"</div>";
-      if(flags.length===0){ html+="<p style='color:#188038;font-size:14px;'>✅ All clear — no urgent items require your attention.</p>"; }
-      else { flags.forEach(function(f){ html+="<div class='actionCard "+(f.urgency==="overdue"?"overdue":"soon")+"'><div class='actionCard-icon'>"+(f.urgency==="overdue"?"🔴":"🟠")+"</div><div class='actionCard-body'><div class='actionCard-centre'>"+escapeHtml(f.centre)+"</div><div class='actionCard-detail'>"+escapeHtml(f.detail)+"</div><div class='actionCard-category'>"+escapeHtml(f.category)+"</div></div></div>"; }); }
-      html+="</div>";
+      var html = "<div class='dashGrid2'>";
+
+      html += "<div class='card' style='border-left:4px solid " + (flags.length===0?"#188038":"#d93025") + ";'>";
+      html += "<div class='card-title'>" + (flags.length===0?"✅":"🔴") + " Needs Your Action" + (flags.length>0?" ("+flags.length+")":"") + "</div>";
+      if (flags.length===0) { html += "<p style='color:#188038;font-size:14px;'>✅ All clear — no urgent items require your attention.</p>"; }
+      else { flags.forEach(function(f){ html += "<div class='actionCard "+(f.urgency==="overdue"?"overdue":"soon")+"'><div class='actionCard-icon'>"+(f.urgency==="overdue"?"🔴":"🟠")+"</div><div class='actionCard-body'><div class='actionCard-centre'>"+escapeHtml(f.centre)+"</div><div class='actionCard-detail'>"+escapeHtml(f.detail)+"</div><div class='actionCard-category'>"+escapeHtml(f.category)+"</div></div></div>"; }); }
+      html += "</div>";
 
       var latestOccupancy = latestWeekly ? parseFloat(latestWeekly["Occupancy %"]) : null;
       var latestSessions = latestWeekly ? (latestWeekly["Sessions Booked"]||"—") : "—";
       var latestEnquiries = latestWeekly ? ((latestWeekly["Total Enquiries"]!==undefined&&latestWeekly["Total Enquiries"]!=="0"&&latestWeekly["Total Enquiries"]!=="")?latestWeekly["Total Enquiries"]:"—") : "—";
       var latestConversion = latestWeekly ? ((latestWeekly["Overall Conversion %"]!==undefined&&latestWeekly["Overall Conversion %"]!=="")?latestWeekly["Overall Conversion %"]:"—") : "—";
 
-      html+="<div class='dashGrid2'>";
-      html+="<div class='card'><div class='card-title'>📈 This Week at a Glance</div>";
-      html+="<div class='metricRow'><span class='metricLabel'>Occupancy</span><span class='metricValue'>"+(latestOccupancy!==null?Math.round(latestOccupancy*100)+"%":"—")+"</span></div>";
-      html+="<div class='metricRow'><span class='metricLabel'>Sessions Booked</span><span class='metricValue'>"+escapeHtml(String(latestSessions))+"</span></div>";
-      html+="<div class='metricRow'><span class='metricLabel'>Total Enquiries</span><span class='metricValue'>"+escapeHtml(String(latestEnquiries))+"</span></div>";
-      html+="<div class='metricRow'><span class='metricLabel'>Overall Conversion</span><span class='metricValue'>"+(latestConversion!=="—"?latestConversion+"%":"—")+"</span></div>";
-      html+="</div>";
+      html += "<div class='card'><div class='card-title'>📈 This Week at a Glance</div>";
+      html += "<div class='metricRow'><span class='metricLabel'>Occupancy</span><span class='metricValue'>"+(latestOccupancy!==null?Math.round(latestOccupancy*100)+"%":"—")+"</span></div>";
+      html += "<div class='metricRow'><span class='metricLabel'>Sessions Booked</span><span class='metricValue'>"+escapeHtml(String(latestSessions))+"</span></div>";
+      html += "<div class='metricRow'><span class='metricLabel'>Total Enquiries</span><span class='metricValue'>"+escapeHtml(String(latestEnquiries))+"</span></div>";
+      html += "<div class='metricRow'><span class='metricLabel'>Overall Conversion</span><span class='metricValue'>"+(latestConversion!=="—"?latestConversion+"%":"—")+"</span></div>";
+      html += "</div></div>";
+
+      html += "<div class='card'><div class='legendRow'><strong style='font-size:13px;'>Legend:</strong>" +
+        "<span><span class='statusEmoji'>✅</span> Both Reviewed</span>" +
+        "<span><span class='statusEmoji'>⚠️</span> Pending Director Review</span>" +
+        "<span><span class='statusEmoji'>🔺</span> Pending Manager/AP Review</span>" +
+        "<span><span class='statusEmoji'>⚠️🔺</span> Both Pending</span>" +
+        "<span><span class='statusEmoji'>🔴🔻</span> Both Pending 7+ Days (Overdue)</span>" +
+        "<span><span class='statusEmoji' style='color:#8b0000;font-weight:700;'>❓</span> No Activity Yet</span></div></div>";
 
       var sheetToLabel={}; Object.keys(MODULES).forEach(function(k){ if(MODULES[k].sheet) sheetToLabel[MODULES[k].sheet]=MODULES[k].label; });
       var statusRows=centres.map(function(c){
         var status=data.status||{};
-        var cells=DASHBOARD_SHEETS.map(function(s){
-          var st=(status[s]||{})[c.id];
-          if(!st||!st.hasActivity) return "<td><span style='color:#ccc;font-size:11px;'>—</span></td>";
-          var dBadge = st.selfPending ? "<span class='badge badge-soon' style='font-size:10px;padding:2px 6px;'>D:⚠️</span>" : "<span class='badge badge-ok' style='font-size:10px;padding:2px 6px;'>D:✅</span>";
-          var mBadge = st.oversightPending ? "<span class='badge badge-soon' style='font-size:10px;padding:2px 6px;'>M:⚠️</span>" : "<span class='badge badge-ok' style='font-size:10px;padding:2px 6px;'>M:✅</span>";
-          return "<td>"+dBadge+" "+mBadge+"</td>";
-        }).join("");
+        var cells=DASHBOARD_SHEETS.map(function(s){ return "<td style='text-align:center;'>"+renderReviewCell((status[s]||{})[c.id])+"</td>"; }).join("");
         return "<tr><td><strong style='font-size:12px;'>"+escapeHtml(c.name)+"</strong></td>"+cells+"</tr>";
       });
       var statusHeaders=["Centre"].concat(DASHBOARD_SHEETS.map(function(s){return sheetToLabel[s]||s;}));
-      html+="<div class='card'><div class='card-title'>🔍 Review Status</div>"+buildTable(statusHeaders,statusRows)+"</div>";
-      html+="</div>";
+      html += "<div class='card'><div class='card-title'>🔍 Review Status</div><div style='overflow-x:auto;'>"+buildReviewMatrixTable(statusHeaders,statusRows)+"</div></div>";
 
-      html+="<div class='card'><div class='card-title'>📝 Weekly Performance Snapshot</div>";
+      html += "<div class='card'><div class='card-title'>📝 Weekly Performance Snapshot</div>";
       var byCentre={};
       safeArray(records["Weekly_Report"]).forEach(function(r){ var c=r["Centre Name"]||"Unknown"; if(!byCentre[c]) byCentre[c]=[]; byCentre[c].push(r); });
       var names=Object.keys(byCentre);
-      if(names.length===0){ html+="<p style='color:#666;'>No weekly reports submitted yet.</p>"; }
+      if (names.length===0) { html += "<p style='color:#666;'>No weekly reports submitted yet.</p>"; }
       else { names.forEach(function(centreName){
         var recs=byCentre[centreName].filter(function(r){return r["Week Ending"]&&!isNaN(new Date(r["Week Ending"]).getTime());});
         recs.sort(function(a,b){return new Date(b["Week Ending"])-new Date(a["Week Ending"]);});
         var latest=recs[0];
-        html+="<div class='snapshotCard'><div class='snapshotCard-title'>"+escapeHtml(centreName)+(latest?" — Week ending "+escapeHtml(latest["Week Ending"]):"")+"</div>";
-        if(latest){
+        html += "<div class='snapshotCard'><div class='snapshotCard-title'>"+escapeHtml(centreName)+(latest?" — Week ending "+escapeHtml(latest["Week Ending"]):"")+"</div>";
+        if (latest) {
           var convDisplay=(latest["Overall Conversion %"]!==undefined&&latest["Overall Conversion %"]!=="")?latest["Overall Conversion %"]+"%":"—";
           var enqDisplay=(latest["Total Enquiries"]!==undefined&&latest["Total Enquiries"]!=="")?latest["Total Enquiries"]:"—";
-          html+="<div class='snapshotCard-row' style='color:#666;font-size:12px;margin-bottom:6px;'>Sessions: "+escapeHtml(latest["Sessions Booked"])+" | Occupancy: "+(parseFloat(latest["Occupancy %"])>0?Math.round(parseFloat(latest["Occupancy %"])*100)+"%":latest["Occupancy %"])+" | Enquiries: "+escapeHtml(enqDisplay)+" | Conversion: "+escapeHtml(convDisplay)+"</div>";
-          html+="<div class='snapshotCard-row'><span class='win-text'>✅ Wins:</span> "+escapeHtml(latest["Wins"]||"—")+"</div>";
-          html+="<div class='snapshotCard-row'><span class='challenge-text'>⚠️ Challenges:</span> "+escapeHtml(latest["Challenges"]||"—")+"</div>";
-          html+="<div class='snapshotCard-row'><span class='support-text'>🆘 Support:</span> "+escapeHtml(latest["Support Required"]||"—")+"</div>";
-        } else { html+="<div style='color:#999;font-size:13px;'>No reports submitted yet.</div>"; }
-        html+="</div>";
+          html += "<div class='snapshotCard-row' style='color:#666;font-size:12px;margin-bottom:6px;'>Sessions: "+escapeHtml(latest["Sessions Booked"])+" | Occupancy: "+(parseFloat(latest["Occupancy %"])>0?Math.round(parseFloat(latest["Occupancy %"])*100)+"%":latest["Occupancy %"])+" | Enquiries: "+escapeHtml(enqDisplay)+" | Conversion: "+escapeHtml(convDisplay)+"</div>";
+          html += "<div class='snapshotCard-row'><span class='win-text'>✅ Wins:</span> "+escapeHtml(latest["Wins"]||"—")+"</div>";
+          html += "<div class='snapshotCard-row'><span class='challenge-text'>⚠️ Challenges:</span> "+escapeHtml(latest["Challenges"]||"—")+"</div>";
+          html += "<div class='snapshotCard-row'><span class='support-text'>🆘 Support:</span> "+escapeHtml(latest["Support Required"]||"—")+"</div>";
+        } else { html += "<div style='color:#999;font-size:13px;'>No reports submitted yet.</div>"; }
+        html += "</div>";
       }); }
-      html+="</div>";
+      html += "</div>";
 
-      document.getElementById('tableContainer').innerHTML=html;
-    } catch(e){ document.getElementById('tableContainer').innerHTML="<p class='errorMsg'>❌ Display error: "+e.message+"</p>"; }
+      document.getElementById('tableContainer').innerHTML = html;
+    } catch(e){ document.getElementById('tableContainer').innerHTML = "<p class='errorMsg'>❌ Display error: " + e.message + "</p>"; }
   }
 
   function loadDashboard() {
     if(!_dataCache[cacheKeyFor(DASHBOARD_SHEETS,currentUser.centreId)]){ document.getElementById('tableContainer').innerHTML="<p id='loadingMsg'>Loading dashboard...</p>"; }
     fetchDashboardDataCached(DASHBOARD_SHEETS,currentUser.centreId,function(data){ if(currentModule==='dashboard') renderDashboardData(data); });
+  }
+
+  // ============================================
+  // FAQ BOT — rule-based, fuzzy-matched, live-data aware
+  // ============================================
+
+  var KNOWLEDGE_BASE = [
+    { topic:"When is the Weekly Report due", keywords:["date","due","when","deadline","submit","weekly","report","sunday","monday","week","expect"], answer:"Great question! Here's the rhythm to follow: your Weekly Report should be submitted at the start of each week, covering the previous week — and we treat Sunday as the end of that week. So for example, if you're submitting on Monday 3 August, your report should cover the week ending Sunday 2 August. Keeping to this rhythm helps everyone stay on the same page 📅" },
+    { topic:"Add a Weekly Report", keywords:["add","new","submit","weekly","report","week"], answer:"To add a Weekly Report: open the 📋 Weekly Reports tab, click '➕ Add New Weekly Report', fill in the 4 sections (Occupancy, Enrolment Pipeline, Narrative, then check the Compliance Snapshot), and click Save Report." },
+    { topic:"Fix a mistake in a submitted report", keywords:["mistake","wrong","error","edit","fix","correct","already","submitted","typo"], answer:"Right now, once a Weekly Report or record is saved, you can't edit it directly yourself — this keeps the audit trail clean. If you've spotted a mistake, please raise it in 🗣️ Discussion Points so your Area Manager or Approved Provider can correct it and log why the change was made." },
+    { topic:"Who sees my Weekly Report", keywords:["who","see","sees","visible","view","weekly","report","access"], answer:"Your Weekly Report is visible to your Area Manager and the Approved Provider, since they oversee all centres. Other Directors can only see their own centre's data — you won't see anyone else's reports, and they won't see yours." },
+    { topic:"Manager Check meaning", keywords:["manager","check","greyed","grey","cant","edit","director","selfassessment","self","assessment"], answer:"'Manager Check' can only be edited by Area Managers or the Approved Provider — it's their sign-off on what a Director entered. Directors can edit 'Director Self-Assessment' and 'Director Notes', but Manager Check/Notes appear read-only for them." },
+    { topic:"Delete an item", keywords:["delete","remove","getrid","erase","item"], answer:"Only the Approved Provider can delete or modify items in checklist tabs and Compliance & Certificates. If something needs to be removed, please raise it as a request in 🗣️ Discussion Points." },
+    { topic:"Add an item to a checklist", keywords:["add","new","item","checklist","task","programming","owna","displays","sawd","qip"], answer:"Directors and Area Managers can add new items in checklist tabs (Monthly Programming, OWNA Review, Additional Checks, SAWD/QIP, Displays) — scroll to '⚙️ Manage Items' at the bottom and click '➕ Add New Item'." },
+    { topic:"Review Status symbols", keywords:["review","status","symbol","triangle","warning","pending","reviewed","questionmark","mean"], answer:"Here's the full breakdown: ✅ means both Director and Manager have reviewed. ⚠️ means Director review is pending. 🔺 means Manager/AP review is pending. ⚠️🔺 together means both are pending. 🔴🔻 means both have been pending for 7+ days — that's your overdue flag. And ❓ means there's no activity to review yet." },
+    { topic:"Export data", keywords:["export","download","csv","backup","data"], answer:"Directors can export their own centre's data using the button in the top-right header. Approved Providers can export all centres, credentials, or archive old records from the same location." },
+    { topic:"Export only part of the data", keywords:["export","only","one","month","partial","specific","date","range","filter"], answer:"Right now, exports pull the full dataset for your centre rather than a specific date range — think of it as a complete backup rather than a filtered report. Once downloaded as a CSV, you can open it in Excel and filter or sort it however you need." },
+    { topic:"Password reset or lockout", keywords:["password","reset","locked","lockout","forgot","login","cant","log","in"], answer:"If you're locked out after 5 failed attempts, contact your Approved Provider to unlock your account. To reset a forgotten password, ask the Approved Provider to issue you a new temporary one." },
+    { topic:"Change email address", keywords:["change","email","address","update","account"], answer:"You can't change your own email directly — please ask your Approved Provider to update it for you in Manage Users & Centres. Your login will then use the new email going forward." },
+    { topic:"Compliance certificate dates", keywords:["compliance","certificate","overdue","duesoon","expiry","expire","renew"], answer:"In 📜 Compliance & Certificates, items are automatically sorted with the most urgent (overdue) at the top, followed by due soon, then OK. Add a new completion date using '➕ Add Date' on any row." },
+    { topic:"Item shows overdue but I already completed it", keywords:["overdue","already","done","completed","still","shows","wrong","incorrect"], answer:"If something still shows OVERDUE after you've completed it, it usually means the new completion date hasn't been added yet. Head to 📜 Compliance & Certificates, find the item, and click '➕ Add Date' to log the completion — that will recalculate the next due date automatically." },
+    { topic:"Add a document link to compliance", keywords:["link","document","upload","attach","drive","google","proof","certificate"], answer:"When adding a completion date in Compliance & Certificates, there's an optional 'Document Link' field — paste your Google Drive sharing link there so anyone reviewing can click through and view the actual certificate or proof." },
+    { topic:"Frequency of a compliance item is wrong", keywords:["frequency","wrong","incorrect","annually","monthly","quarterly","change"], answer:"If a compliance item's frequency looks wrong, that's a setup detail only the Approved Provider can adjust. Please raise it in 🗣️ Discussion Points and mention the exact item and what frequency it should be." },
+    { topic:"Discussion Points purpose", keywords:["discussion","points","raise","request","escalate"], answer:"Discussion Points is where you raise requests that need Approved Provider action — like deleting an item, correcting a Manager Check entry, or escalating an issue that needs discussion." },
+    { topic:"Roles overview", keywords:["role","director","areamanager","approvedprovider","permission","access","who","can"], answer:"There are 3 roles: Director (runs one centre, submits reports), Area Manager (oversees multiple centres, reviews Director work), and Approved Provider (full access, manages users/centres, can delete items)." },
+    { topic:"Why can't I see other centres", keywords:["other","centres","cant","see","only","mine","why"], answer:"As a Director, you'll only ever see your own centre's data — that's intentional, to keep each centre's information private. Area Managers and the Approved Provider can see across all centres since they oversee the whole organisation." },
+    { topic:"Why is Centre Name column missing", keywords:["centre","name","column","missing","not","showing"], answer:"You won't see a 'Centre Name' column because as a Director you're only ever looking at your own centre — it would just repeat the same name in every row, so we hide it to keep the table cleaner." },
+    { topic:"What is Sessions Booked", keywords:["sessions","booked","what","mean","means"], answer:"'Sessions Booked' is simply the total number of childcare sessions booked at your centre for that week — this feeds into your occupancy percentage calculation." },
+    { topic:"How is Overall Conversion % calculated", keywords:["overall","conversion","calculate","calculated","how","percentage","enrolment"], answer:"Overall Conversion % is your New Enrolments divided by your Total Enquiries for that week, shown as a percentage. So if you had 10 enquiries and 2 became enrolments, that's a 20% conversion." },
+    { topic:"Total Enquiries showing dash", keywords:["total","enquiries","showing","dash","blank","empty","not","showing"], answer:"If Total Enquiries shows a dash (—), it usually means that particular Weekly Report was submitted before this field existed, or the enquiry numbers weren't filled in at the time. New reports going forward will calculate and show this automatically." },
+    { topic:"What if I forget to submit a Weekly Report", keywords:["forget","forgot","miss","missed","skip","didnt","submit"], answer:"No panic — just submit it as soon as you remember, even if it's a bit late. It's always better to have the data logged than to skip the week entirely. Try to get back into the weekly rhythm as soon as you can." },
+    { topic:"What does Legacy data mean", keywords:["legacy","data","mean","old","means"], answer:"'Legacy data' just means that record existed in the system before we started tracking formal review confirmations — so there's no exact 'last updated' timestamp attached to it, but the data itself is still valid." },
+    { topic:"Session expired message", keywords:["session","expired","expire","logged","out","kicked"], answer:"Your login session automatically expires after a period of inactivity, for security. Simply log back in with your email and password — nothing you were working on gets lost, since everything saves as you go." },
+    { topic:"Is there a mobile app", keywords:["mobile","app","phone","ipad","tablet","download"], answer:"There isn't a separate app to download — this platform works right in your web browser on your phone, tablet, or computer. You can bookmark the page for quick access, and it'll adjust nicely to any screen size." },
+    { topic:"Can I opt out of a checklist item", keywords:["opt","out","not","apply","applicable","every","centre","all"], answer:"Checklist items are added across all centres at once by design, to keep everyone on the same standard. If something genuinely doesn't apply to your centre, mark it accordingly in your notes and raise it in 🗣️ Discussion Points so the Approved Provider is aware." },
+    { topic:"What is a Task ID", keywords:["task","id","what","mean"], answer:"A Task ID is just an internal reference number (like T001) used behind the scenes to keep the same checklist item linked correctly across all centres — you don't need to do anything with it, it's just for tracking." },
+    { topic:"How do I know what needs my attention today", keywords:["attention","today","urgent","priority","what","should","focus"], answer:"Head straight to the 🏠 Dashboard — the 'Needs Your Action' card at the top lists everything urgent across compliance, complaints, and appraisals, sorted with the most critical items first." },
+    { topic:"Can I update a complaint later", keywords:["update","complaint","later","resolve","resolution","change","status"], answer:"Currently, once a complaint is logged you can't directly edit it yourself — if there's a resolution or update to add, please raise it in 🗣️ Discussion Points so it can be recorded accurately against that complaint." }
+  ];
+
+  var LIVE_DATA_HANDLERS = [
+    {
+      keywords:["overdue","how many overdue","overdue items"],
+      handler: function() {
+        return fetchDashboardDataCached(["Compliance_Certificates_Renewals"], currentUser.centreId, function(){}), 
+          callBackend('getDashboardData',[currentUser.token,["Compliance_Certificates_Renewals"],currentUser.centreId]).then(function(data){
+            var records = safeArray(data.records && data.records["Compliance_Certificates_Renewals"]);
+            var overdue = records.filter(function(r){ return computeComplianceStatus(r).urgency === "overdue"; });
+            if (overdue.length === 0) return "✅ You have no overdue compliance items right now.";
+            var lines = overdue.map(function(r){ return "- " + r["Item"] + " (was due " + computeComplianceStatus(r).nextDueDisplay + ")"; });
+            return "🔴 You have " + overdue.length + " overdue item(s):\n" + lines.join("\n");
+          });
+      }
+    },
+    {
+      keywords:["occupancy","this week occupancy","my occupancy"],
+      handler: function() {
+        return callBackend('getDashboardData',[currentUser.token,["Weekly_Report"],currentUser.centreId]).then(function(data){
+          var records = safeArray(data.records && data.records["Weekly_Report"]).filter(function(r){return r["Week Ending"];});
+          records.sort(function(a,b){return new Date(b["Week Ending"])-new Date(a["Week Ending"]);});
+          if (records.length === 0) return "I couldn't find any Weekly Reports submitted yet.";
+          var latest = records[0];
+          var occ = parseFloat(latest["Occupancy %"]);
+          return "📈 Your latest Weekly Report (Week Ending " + latest["Week Ending"] + ") shows " + (occ>0?Math.round(occ*100)+"%":latest["Occupancy %"]) + " occupancy.";
+        });
+      }
+    },
+    {
+      keywords:["open complaint","how many complaint","pending complaint"],
+      handler: function() {
+        return callBackend('getDashboardData',[currentUser.token,["Complaints_Register"],currentUser.centreId]).then(function(data){
+          var records = safeArray(data.records && data.records["Complaints_Register"]);
+          var open = records.filter(function(r){ return (r["Status"]||"").toLowerCase() !== "closed"; });
+          if (open.length === 0) return "✅ You have no open complaints right now.";
+          return "📢 You have " + open.length + " open complaint(s) — check the Complaints Register tab for details.";
+        });
+      }
+    }
+  ];
+
+  var STOPWORDS = ["how","do","i","the","a","an","to","for","of","is","are","my","what","does","can","in","on","it","this","that","with","you","your"];
+
+  function tokenize(str) {
+    return str.toLowerCase().replace(/[^a-z0-9\s]/g,"").split(/\s+/).filter(function(w){ return w && STOPWORDS.indexOf(w)===-1; });
+  }
+
+  function scoreMatch(tokens, keywords) {
+    var score = 0;
+    tokens.forEach(function(t) {
+      keywords.forEach(function(k) {
+        if (t === k || t.indexOf(k) !== -1 || k.indexOf(t) !== -1) score++;
+      });
+    });
+    return score;
+  }
+
+  function findLiveDataHandler(tokens, rawText) {
+    var best = null, bestScore = 0;
+    LIVE_DATA_HANDLERS.forEach(function(h) {
+      var s = scoreMatch(tokens, h.keywords.join(" ").split(" "));
+      if (s > bestScore) { bestScore = s; best = h; }
+    });
+    return bestScore >= 2 ? best : null;
+  }
+
+  function findBestKBMatch(tokens) {
+    var best = null, bestScore = 0;
+    KNOWLEDGE_BASE.forEach(function(kb) {
+      var s = scoreMatch(tokens, kb.keywords);
+      if (s > bestScore) { bestScore = s; best = kb; }
+    });
+    return { entry: best, score: bestScore };
+  }
+
+  function appendBotMessage(text, isUser) {
+    var msgs = document.getElementById('botMessages');
+    var div = document.createElement('div');
+    div.className = 'botMsg ' + (isUser ? 'botMsg-user' : 'botMsg-bot');
+    div.style.whiteSpace = 'pre-wrap';
+    div.textContent = text;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function appendBotSuggestions(topics) {
+    var msgs = document.getElementById('botMessages');
+    topics.forEach(function(t) {
+      var btn = document.createElement('div');
+      btn.className = 'botSuggestion';
+      btn.textContent = t.topic;
+      btn.onclick = function() { appendBotMessage(t.topic, true); appendBotMessage(t.answer, false); };
+      msgs.appendChild(btn);
+    });
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function sendBotMessage() {
+    var input = document.getElementById('botInput');
+    var text = input.value.trim();
+    if (!text) return;
+    appendBotMessage(text, true);
+    input.value = "";
+
+    var tokens = tokenize(text);
+
+    var liveHandler = findLiveDataHandler(tokens, text);
+    if (liveHandler) {
+      appendBotMessage("Let me check that for you...", false);
+      liveHandler.handler().then(function(answer) {
+        var msgs = document.getElementById('botMessages');
+        msgs.lastChild.textContent = answer;
+      }).catch(function() {
+        var msgs = document.getElementById('botMessages');
+        msgs.lastChild.textContent = "Sorry, I couldn't fetch that data right now.";
+      });
+      return;
+    }
+
+    var match = findBestKBMatch(tokens);
+    if (match.score >= 3) {
+      appendBotMessage(match.entry.answer, false);
+    } else if (match.score >= 1) {
+      appendBotMessage("I think you're asking about \"" + match.entry.topic + "\" — here's what I know:\n\n" + match.entry.answer, false);
+    } else {
+      appendBotMessage("Hmm, I'm not quite following — but let's see if one of these is what you meant:", false);
+      var suggestions = KNOWLEDGE_BASE.slice(0, 3);
+      appendBotSuggestions(suggestions);
+      appendBotMessage("If none of these quite fit, I'm only trained to help with this platform — for anything outside that, please reach out to your Approved Provider.", false);
+    }
+  }
+
+  function toggleBotWindow() {
+    var w = document.getElementById('botWindow');
+    var isOpen = w.style.display === 'flex';
+    w.style.display = isOpen ? 'none' : 'flex';
+    if (!isOpen && document.getElementById('botMessages').children.length === 0) {
+      appendBotMessage("Hi there, I'm Sunshine 👩‍🏫 — think of me as your on-demand trainer for this platform. Ask me anything: how to submit a report, what a status symbol means, who can edit what, and more. I'm still learning, so if I don't quite get your question, I'll do my best to point you in the right direction.", false);
+    }
   }
 
   initAutoSizeObserver();
