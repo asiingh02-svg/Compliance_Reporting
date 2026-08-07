@@ -285,7 +285,53 @@
     usermgmt:        { label:"👥 Manage Users & Centres", type:"usermgmt", restrictedToRoles:["Approved Provider"] }
   };
   function fieldId(key) { return "field_" + key.replace(/[^a-zA-Z0-9]/g, "_"); }
-  function safeArray(a) { return Array.isArray(a) ? a : []; }
+    function safeArray(a) { return Array.isArray(a) ? a : []; }
+
+  function getSheetToLabelMap() {
+    var map = {};
+    Object.keys(MODULES).forEach(function(k){ if (MODULES[k].sheet) map[MODULES[k].sheet] = MODULES[k].label; });
+    return map;
+  }
+
+  function fetchMyPendingActions() {
+    var isDirector = currentUser.role === 'Director';
+    var requestCentreId = isDirector ? currentUser.centreId : 'ALL';
+    return callBackend('getDashboardData', [currentUser.token, DASHBOARD_SHEETS, requestCentreId]).then(function(data) {
+      var sheetToLabel = getSheetToLabelMap();
+      var status = data.status || {};
+      var centres = safeArray(data.centres);
+      var items = [];
+      DASHBOARD_SHEETS.forEach(function(sheet) {
+        var sheetStatus = status[sheet] || {};
+        centres.forEach(function(c) {
+          var st = sheetStatus[c.id];
+          if (!st || !st.hasActivity) return;
+          if (isDirector) {
+            if (st.selfPending) items.push({ centre: c.name, module: sheetToLabel[sheet] || sheet, type: "your self-review" });
+          } else {
+            if (st.oversightPending) items.push({ centre: c.name, module: sheetToLabel[sheet] || sheet, type: "your Manager/AP review" });
+          }
+        });
+      });
+      return items;
+    });
+  }
+
+  function formatPendingActionsMessage(items, greetingPrefix) {
+    if (items.length === 0) {
+      return greetingPrefix + "great news — you have no pending reviews right now. ✅";
+    }
+    var isDirector = currentUser.role === 'Director';
+    var lines = items.slice(0, 10).map(function(it) {
+      return "- " + (isDirector ? "" : it.centre + " — ") + it.module + " is awaiting " + it.type + ".";
+    });
+    var more = items.length > 10 ? "\n...and " + (items.length - 10) + " more." : "";
+    return greetingPrefix + "here's what's pending:\n\n" + lines.join("\n") + more;
+  }
+
+  function resolveKBAnswer(entry) {
+    return (typeof entry.answer === 'function') ? entry.answer(currentUser) : entry.answer;
+  }
   function escapeHtml(str) {
     if (str === undefined || str === null) return "";
     return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
@@ -641,6 +687,22 @@
     }
     renderSidebar();
     switchModule('dashboard');
+    setTimeout(triggerLoginWelcomeSummary, 900);
+  }
+
+  function triggerLoginWelcomeSummary() {
+    var w = document.getElementById('botWindow');
+    w.style.display = 'flex';
+    document.getElementById('botMessages').innerHTML = "";
+    var firstName = currentUser.label.split(" ")[0];
+    appendBotMessage("Welcome back, " + firstName + " 👋 I'm Sunshine, your app trainer. Give me a moment while I check what's pending for you...", false);
+    fetchMyPendingActions().then(function(items) {
+      var msgs = document.getElementById('botMessages');
+      msgs.lastChild.textContent = formatPendingActionsMessage(items, "Here's your quick summary, " + firstName + " — ");
+    }).catch(function() {
+      var msgs = document.getElementById('botMessages');
+      msgs.lastChild.textContent = "I couldn't fetch your pending items just now, but feel free to ask me anything else!";
+    });
   }
 
   var NAV_GROUPS = {
@@ -1294,6 +1356,18 @@
   // ============================================
 
   var KNOWLEDGE_BASE = [
+    { topic:"What am I supposed to do", keywords:["what","supposed","do","my","job","role","responsibility","expected","responsible","task"], answer: function(user) {
+        if (user.role === 'Director') return "As a Director, your main jobs here are: submit your Weekly Report every week, fill in Director Self-Assessment on checklist tabs, log compliance completions, and raise anything unusual in Discussion Points. Think of yourself as the one entering the real, on-the-ground data.";
+        if (user.role === 'Area Manager') return "As an Area Manager, your main jobs are: review each Director's Weekly Report and confirm your review, complete 'Manager Check' on checklist tabs, keep an eye on compliance certificates across your centres, and use AP Feedback Thread to coach your Directors.";
+        return "As the Approved Provider, you have full oversight — reviewing submissions, managing users and centres, approving or correcting items, and handling exports and account access. You're the final checkpoint across the whole platform.";
+      }
+    },
+    { topic:"Who reviews my work", keywords:["who","reviews","approves","checks","my","work","report","submission"], answer: function(user) {
+        if (user.role === 'Director') return "Your Weekly Reports and checklist self-assessments are reviewed by your Area Manager, with the Approved Provider having final oversight.";
+        if (user.role === 'Area Manager') return "Your Manager Check sign-offs sit above the Director's self-assessment — the Approved Provider provides final oversight above you.";
+        return "As Approved Provider, you sit at the top of the review chain — there's no one above you reviewing your entries, though your actions are logged for audit purposes.";
+      }
+    },
     { topic:"When is the Weekly Report due", keywords:["date","due","when","deadline","submit","weekly","report","sunday","monday","week","expect"], answer:"Great question! Here's the rhythm to follow: your Weekly Report should be submitted at the start of each week, covering the previous week — and we treat Sunday as the end of that week. So for example, if you're submitting on Monday 3 August, your report should cover the week ending Sunday 2 August. Keeping to this rhythm helps everyone stay on the same page 📅" },
     { topic:"Add a Weekly Report", keywords:["add","new","submit","weekly","report","week"], answer:"To add a Weekly Report: open the 📋 Weekly Reports tab, click '➕ Add New Weekly Report', fill in the 4 sections (Occupancy, Enrolment Pipeline, Narrative, then check the Compliance Snapshot), and click Save Report." },
     { topic:"Fix a mistake in a submitted report", keywords:["mistake","wrong","error","edit","fix","correct","already","submitted","typo"], answer:"Right now, once a Weekly Report or record is saved, you can't edit it directly yourself — this keeps the audit trail clean. If you've spotted a mistake, please raise it in 🗣️ Discussion Points so your Area Manager or Approved Provider can correct it and log why the change was made." },
@@ -1364,6 +1438,14 @@
           return "📢 You have " + open.length + " open complaint(s) — check the Complaints Register tab for details.";
         });
       }
+    },
+    {
+      keywords:["pending","my review","need to do","approval","awaiting","todo","to do","outstanding","action","what should i do"],
+      handler: function() {
+        return fetchMyPendingActions().then(function(items) {
+          return formatPendingActionsMessage(items, "Here's what's on your plate, " + currentUser.label.split(" ")[0] + " — ");
+        });
+      }
     }
   ];
 
@@ -1417,7 +1499,7 @@
       var btn = document.createElement('div');
       btn.className = 'botSuggestion';
       btn.textContent = t.topic;
-      btn.onclick = function() { appendBotMessage(t.topic, true); appendBotMessage(t.answer, false); };
+      btn.onclick = function() { appendBotMessage(t.topic, true); appendBotMessage(resolveKBAnswer(t), false); };
       msgs.appendChild(btn);
     });
     msgs.scrollTop = msgs.scrollHeight;
@@ -1447,9 +1529,9 @@
 
     var match = findBestKBMatch(tokens);
     if (match.score >= 3) {
-      appendBotMessage(match.entry.answer, false);
+      appendBotMessage(resolveKBAnswer(match.entry), false);
     } else if (match.score >= 1) {
-      appendBotMessage("I think you're asking about \"" + match.entry.topic + "\" — here's what I know:\n\n" + match.entry.answer, false);
+      appendBotMessage("I think you're asking about \"" + match.entry.topic + "\" — here's what I know:\n\n" + resolveKBAnswer(match.entry), false);
     } else {
       appendBotMessage("Hmm, I'm not quite following — but let's see if one of these is what you meant:", false);
       var suggestions = KNOWLEDGE_BASE.slice(0, 3);
@@ -1463,7 +1545,14 @@
     var isOpen = w.style.display === 'flex';
     w.style.display = isOpen ? 'none' : 'flex';
     if (!isOpen && document.getElementById('botMessages').children.length === 0) {
-      appendBotMessage("Hi there, I'm Sunshine 👩‍🏫 — think of me as your on-demand trainer for this platform. Ask me anything: how to submit a report, what a status symbol means, who can edit what, and more. I'm still learning, so if I don't quite get your question, I'll do my best to point you in the right direction.", false);
+            var firstName = currentUser ? currentUser.label.split(" ")[0] : "there";
+      var roleLine = "";
+      if (currentUser) {
+        roleLine = (currentUser.role === 'Director')
+          ? " I can see you're logged in as a Director at your centre."
+          : " I can see you're logged in as " + currentUser.role + " with visibility across all centres.";
+      }
+      appendBotMessage("Hi " + firstName + ", I'm Sunshine 👩‍🏫 — think of me as your on-demand trainer for this platform." + roleLine + " Ask me anything: how to submit a report, what's pending your review, what a status symbol means, and more. I'm still learning, so if I don't quite get your question, I'll do my best to point you in the right direction.", false);
     }
   }
 
