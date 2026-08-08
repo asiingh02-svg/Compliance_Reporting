@@ -159,11 +159,79 @@
   #botInputRow { display:flex; gap:6px; padding:10px; border-top:1px solid #e8eaed; }
   #botInputRow input { margin:0; }
 
+  /* ============================================
+     RESPONSIVE SYSTEM — Desktop / Tablet / Phone
+     ============================================ */
+
+  /* TABLET (1024px and below) — slightly tighter spacing, still 2-column dashboard */
+  @media (max-width:1024px) {
+    #pageContent { padding:20px; }
+    .dashGrid2 { gap:12px; }
+    .card { padding:16px 18px; }
+    table { font-size:12.5px; }
+  }
+
+  /* LARGE PHONE / SMALL TABLET (768px and below) */
   @media (max-width:768px) {
-    #appHeader, #navWrapper { padding-left:16px; padding-right:16px; }
-    #pageContent { padding:16px; }
+    #appHeader { padding:10px 16px; }
+    #navWrapper { padding:4px 16px; }
+    #pageContent { padding:14px; }
     #headerDate { display:none; }
-    .dashGrid2 { grid-template-columns:1fr; }
+    #headerMeta { flex-wrap:wrap; }
+    .dashGrid2 { grid-template-columns:1fr; gap:12px; }
+    .card { padding:14px 16px; }
+    .card-title { font-size:13px; }
+    #moduleTitle { font-size:17px; }
+    table { font-size:12px; }
+    th { font-size:10px; padding:6px 4px; }
+    td { padding:7px 8px; }
+    .navBtn { font-size:11px; padding:6px 10px; }
+    input, textarea, select, button { font-size:14px; } /* prevents iOS zoom-on-focus */
+    .metricValue { font-size:14px; }
+    .actionCard-detail { font-size:12.5px; }
+    #botWindow { width:min(340px, calc(100vw - 24px)); right:12px; bottom:80px; }
+    #botBubble { right:14px; bottom:14px; }
+  }
+
+  /* PHONE (480px and below) */
+  @media (max-width:480px) {
+    #headerGreeting { font-size:13px; }
+    #headerMeta { font-size:10.5px; gap:5px; }
+    .roleBadge, .centreBadge { font-size:9.5px; padding:2px 7px; }
+    #userAvatar { width:34px; height:34px; font-size:12px; }
+    #logoutBtn { font-size:11px; padding:6px 10px; }
+    #moduleTitle { font-size:15px; }
+    .navBtn { font-size:10px; padding:6px 8px; }
+    .card { padding:12px 14px; }
+    .card-title { font-size:12px; }
+    .toggleBtn { font-size:12px; padding:9px 14px; width:100%; }
+    #formContainer { padding:16px; max-width:100%; }
+    label { font-size:12px; }
+    input, textarea, select { padding:11px 12px; }
+    button { padding:11px 12px; }
+    table { font-size:11px; }
+    th { font-size:9px; padding:5px 3px; }
+    td { padding:6px 6px; }
+    .miniBtn { font-size:11px; padding:6px 10px; }
+    .exportBtnStyle { font-size:11px; padding:7px 10px; }
+    #botWindow { width:calc(100vw - 16px); right:8px; bottom:76px; max-height:70vh; }
+    #botBubble { width:52px; height:52px; font-size:26px; right:12px; bottom:12px; }
+    .legendRow { font-size:10.5px; gap:8px; }
+    .snapshotCard-row { font-size:12px; }
+  }
+
+  /* TOUCH-FRIENDLY TAP TARGETS — any touch-capable device, regardless of size */
+  .touch-device button, .touch-device .navBtn, .touch-device .miniBtn,
+  .touch-device input, .touch-device select, .touch-device textarea {
+    min-height:40px;
+  }
+  .touch-device .toggleBtn, .touch-device #logoutBtn { min-height:42px; }
+
+  /* LANDSCAPE PHONE — reclaim vertical space since width is more generous */
+  @media (max-height:480px) and (orientation:landscape) {
+    #appHeader { padding:6px 16px; }
+    #navWrapper { padding:2px 16px; }
+    #pageContent { padding:10px 16px; }
   }
 </style>
 </head>
@@ -299,7 +367,39 @@
     usermgmt:        { label:"👥 Manage Users & Centres", type:"usermgmt", restrictedToRoles:["Approved Provider"] }
   };
   function fieldId(key) { return "field_" + key.replace(/[^a-zA-Z0-9]/g, "_"); }
-    function safeArray(a) { return Array.isArray(a) ? a : []; }
+    // ============================================
+  // DEVICE AWARENESS — real-time screen size & type detection
+  // ============================================
+  var DeviceInfo = { type: 'desktop', width: 0, height: 0, isTouch: false, orientation: 'landscape', os: 'unknown' };
+
+  function detectDevice() {
+    var w = window.innerWidth, h = window.innerHeight;
+    DeviceInfo.width = w; DeviceInfo.height = h;
+    DeviceInfo.isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    DeviceInfo.orientation = w >= h ? 'landscape' : 'portrait';
+    if (w <= 480) DeviceInfo.type = 'phone';
+    else if (w <= 1024) DeviceInfo.type = 'tablet';
+    else DeviceInfo.type = 'desktop';
+
+    var ua = navigator.userAgent || '';
+    if (/iPhone|iPod/.test(ua)) DeviceInfo.os = 'ios-phone';
+    else if (/iPad/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) DeviceInfo.os = 'ios-tablet';
+    else if (/Android/.test(ua)) DeviceInfo.os = 'android';
+    else if (/Win/.test(navigator.platform)) DeviceInfo.os = 'windows';
+    else if (/Mac/.test(navigator.platform)) DeviceInfo.os = 'mac';
+    else DeviceInfo.os = 'unknown';
+
+    var body = document.body;
+    body.classList.remove('device-phone','device-tablet','device-desktop','touch-device','no-touch','orientation-portrait','orientation-landscape');
+    body.classList.add('device-' + DeviceInfo.type);
+    body.classList.add(DeviceInfo.isTouch ? 'touch-device' : 'no-touch');
+    body.classList.add('orientation-' + DeviceInfo.orientation);
+  }
+
+  detectDevice();
+  window.addEventListener('resize', detectDevice);
+  window.addEventListener('orientationchange', function(){ setTimeout(detectDevice, 200); });  
+  function safeArray(a) { return Array.isArray(a) ? a : []; }
 
   function getSheetToLabelMap() {
     var map = {};
@@ -1332,7 +1432,8 @@
         return "<tr><td><strong style='font-size:12px;'>"+escapeHtml(c.name)+"</strong></td>"+cells+"</tr>";
       });
       var statusHeaders=["Centre"].concat(DASHBOARD_SHEETS.map(function(s){return sheetToLabel[s]||s;}));
-      html += "<div class='card'><div class='card-title'>🔍 Review Status</div><div style='overflow-x:auto;'>"+buildReviewMatrixTable(statusHeaders,statusRows)+"</div></div>";
+      var matrixHint = DeviceInfo.type !== 'desktop' ? "<div style='font-size:11px;color:#888;margin-bottom:6px;'>↔️ Swipe sideways to see all modules</div>" : "";
+      html += "<div class='card'><div class='card-title'>🔍 Review Status</div>"+matrixHint+"<div style='overflow-x:auto;-webkit-overflow-scrolling:touch;'>"+buildReviewMatrixTable(statusHeaders,statusRows)+"</div></div>";
 
       html += "<div class='card'><div class='card-title'>📝 Weekly Performance Snapshot</div>";
       var byCentre={};
@@ -1408,7 +1509,17 @@
     { topic:"What if I forget to submit a Weekly Report", keywords:["forget","forgot","miss","missed","skip","didnt","submit"], answer:"No panic — just submit it as soon as you remember, even if it's a bit late. It's always better to have the data logged than to skip the week entirely. Try to get back into the weekly rhythm as soon as you can." },
     { topic:"What does Legacy data mean", keywords:["legacy","data","mean","old","means"], answer:"'Legacy data' just means that record existed in the system before we started tracking formal review confirmations — so there's no exact 'last updated' timestamp attached to it, but the data itself is still valid." },
     { topic:"Session expired message", keywords:["session","expired","expire","logged","out","kicked"], answer:"Your login session automatically expires after a period of inactivity, for security. Simply log back in with your email and password — nothing you were working on gets lost, since everything saves as you go." },
-    { topic:"Is there a mobile app", keywords:["mobile","app","phone","ipad","tablet","download"], answer:"There isn't a separate app to download — this platform works right in your web browser on your phone, tablet, or computer. You can bookmark the page for quick access, and it'll adjust nicely to any screen size." },
+        { topic:"Install this app on my device", keywords:["install","app","phone","ipad","iphone","android","tablet","download","homescreen","home","screen"], answer: function() {
+        var os = DeviceInfo.os;
+        if (os === 'ios-phone' || os === 'ios-tablet') {
+          return "I can see you're on an iPhone/iPad 📱 — here's how to install this as an app:\n\n1. Tap the Share icon (square with an arrow) at the bottom of Safari\n2. Scroll down and tap 'Add to Home Screen'\n3. Tap 'Add' — you'll now have an icon just like a regular app!\n\nNote: this only works in Safari, not Chrome, on iOS.";
+        }
+        if (os === 'android') {
+          return "I can see you're on Android 📱 — here's how to install this as an app:\n\n1. Tap the ⋮ menu (top-right of Chrome)\n2. Tap 'Add to Home screen' or 'Install app'\n3. Confirm — you'll now have an icon on your home screen!";
+        }
+        return "Here's how to install this as an app on your computer 💻:\n\n1. Open this page in Chrome or Edge\n2. Look for the install icon in the address bar (or ⋮ menu → 'Install app')\n3. Click Install — a desktop shortcut is created!\n\nOn a phone or tablet, tap your browser's Share/menu icon and look for 'Add to Home Screen'.";
+      }
+    },
     { topic:"Can I opt out of a checklist item", keywords:["opt","out","not","apply","applicable","every","centre","all"], answer:"Checklist items are added across all centres at once by design, to keep everyone on the same standard. If something genuinely doesn't apply to your centre, mark it accordingly in your notes and raise it in 🗣️ Discussion Points so the Approved Provider is aware." },
     { topic:"What is a Task ID", keywords:["task","id","what","mean"], answer:"A Task ID is just an internal reference number (like T001) used behind the scenes to keep the same checklist item linked correctly across all centres — you don't need to do anything with it, it's just for tracking." },
     { topic:"How do I know what needs my attention today", keywords:["attention","today","urgent","priority","what","should","focus"], answer:"Head straight to the 🏠 Dashboard — the 'Needs Your Action' card at the top lists everything urgent across compliance, complaints, and appraisals, sorted with the most critical items first." },
