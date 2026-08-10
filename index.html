@@ -303,8 +303,8 @@
   <div id="botHeader">👩‍🏫 Sunshine — Your App Trainer <span id="botCloseBtn" onclick="toggleBotWindow()">✕</span></div>
   <div id="botMessages"></div>
   <div id="botInputRow">
-    <input type="text" id="botInput" placeholder="Ask me anything about this app..." onkeypress="if(event.key==='Enter') sendBotMessage();">
-    <button onclick="sendBotMessage()" style="width:auto;padding:8px 14px;">Send</button>
+    <input type="text" id="botInput" placeholder="Ask me anything about this app..." onkeypress="if(event.key==='Enter') sunSendSmart();">
+<button onclick="sunSendSmart()" style="width:auto;padding:8px 14px;">Send</button>
   </div>
 </div>
 
@@ -787,6 +787,7 @@
   function showDashboard(user) {
     document.getElementById('loginBox').style.display="none";
     document.getElementById('dashboard').style.display="block";
+    invalidateCache(); 
     document.getElementById('userAvatar').textContent=getInitials(user.label);
     document.getElementById('headerGreeting').textContent=getGreeting()+", "+user.label.split(" ")[0]+" 👋";
     document.getElementById('headerMeta').innerHTML="<span class='roleBadge "+getRoleBadgeClass(user.role)+"'>"+user.role+"</span><span class='centreBadge'>📍 "+(user.centreId==='ALL'?'All Centres':'LB Lalor Rd')+"</span>"+(isMasterAdmin()?"<span class='masterBadge'>MASTER ACCESS</span>":"");
@@ -1630,41 +1631,7 @@
     msgs.scrollTop = msgs.scrollHeight;
   }
 
-  function sendBotMessage() {
-    var input = document.getElementById('botInput');
-    var text = input.value.trim();
-    if (!text) return;
-    appendBotMessage(text, true);
-    input.value = "";
-
-    var tokens = tokenize(text);
-
-    var liveHandler = findLiveDataHandler(tokens, text);
-    if (liveHandler) {
-      appendBotMessage("Let me check that for you...", false);
-      liveHandler.handler().then(function(answer) {
-        var msgs = document.getElementById('botMessages');
-        msgs.lastChild.textContent = answer;
-      }).catch(function() {
-        var msgs = document.getElementById('botMessages');
-        msgs.lastChild.textContent = "Sorry, I couldn't fetch that data right now.";
-      });
-      return;
-    }
-
-    var match = findBestKBMatch(tokens);
-    if (match.score >= 3) {
-      appendBotMessage(resolveKBAnswer(match.entry), false);
-    } else if (match.score >= 1) {
-      appendBotMessage("I think you're asking about \"" + match.entry.topic + "\" — here's what I know:\n\n" + resolveKBAnswer(match.entry), false);
-    } else {
-      appendBotMessage("Hmm, I'm not quite following — but let's see if one of these is what you meant:", false);
-      var suggestions = KNOWLEDGE_BASE.slice(0, 3);
-      appendBotSuggestions(suggestions);
-      appendBotMessage("If none of these quite fit, I'm only trained to help with this platform — for anything outside that, please reach out to your Approved Provider.", false);
-    }
-  }
-
+  
   function toggleBotWindow() {
     var w = document.getElementById('botWindow');
     var isOpen = w.style.display === 'flex';
@@ -1683,6 +1650,33 @@
 
   initAutoSizeObserver();
   showLoginScreen();
+// This connects your existing chat interface to the Gemini AI
+async function sunSendSmart() {
+    var inputEl = document.getElementById('botInput');
+    var val = inputEl.value.trim();
+    if (!val) return;
+
+    var msgs = document.getElementById('botMessages');
+    var userDiv = document.createElement('div');
+    userDiv.className = 'botMsg botMsg-user';
+    userDiv.textContent = val;
+    msgs.appendChild(userDiv);
+    inputEl.value = "";
+
+    var botDiv = document.createElement('div');
+    botDiv.className = 'botMsg botMsg-bot';
+    botDiv.textContent = "Sunshine is thinking...";
+    msgs.appendChild(botDiv);
+
+    try {
+        // This calls the askSunshine action we added to Code.gs
+        const res = await callBackend('askSunshine', [val]);
+        botDiv.textContent = res;
+    } catch (e) {
+        botDiv.textContent = "Sorry, I couldn't reach the AI brain. Please try again.";
+    }
+    msgs.scrollTop = msgs.scrollHeight;
+}
 </script>
 </body>
 </html>
