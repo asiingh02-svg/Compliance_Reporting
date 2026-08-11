@@ -51,19 +51,22 @@
   .navBtn:hover { background:#e4e8f5; color:#202124; border-color:#c5cfe8; }
   .navBtn.active { color:white; font-weight:700; border-color:transparent; box-shadow:0 2px 6px rgba(0,0,0,.15); }
   .navBtn[data-group="core"] { background:#e8f0fe; color:#1a56c4; }
-  .navBtn[data-group="core"].active { background:linear-gradient(135deg,#4285F4,#1a56c4); }
+  .navBtn[data-group="core"].active { background:linear-gradient(135deg,#4285F4,#1a56c4); color:white; }
   .navBtn[data-group="monthly"] { background:#e6f4ea; color:#146c2e; }
-  .navBtn[data-group="monthly"].active { background:linear-gradient(135deg,#188038,#146c2e); }
+  .navBtn[data-group="monthly"].active { background:linear-gradient(135deg,#188038,#146c2e); color:white; }
   .navBtn[data-group="compliance"] { background:#fef7e0; color:#7a5600; }
   .navBtn[data-group="compliance"].active { background:linear-gradient(135deg,#f9ab00,#e37400); color:white; }
   .navBtn[data-group="consent"] { background:#f3e8ff; color:#6a1b9a; }
-  .navBtn[data-group="consent"].active { background:linear-gradient(135deg,#7b1fa2,#4a148c); }
+  .navBtn[data-group="consent"].active { background:linear-gradient(135deg,#7b1fa2,#4a148c); color:white; }
   .navBtn[data-group="people"] { background:#fce8e6; color:#a50e0e; }
-  .navBtn[data-group="people"].active { background:linear-gradient(135deg,#d93025,#a50e0e); }
+  .navBtn[data-group="people"].active { background:linear-gradient(135deg,#d93025,#a50e0e); color:white; }
   .navBtn[data-group="admin"] { background:#f3e8ff; color:#6a1b9a; }
-  .navBtn[data-group="admin"].active { background:linear-gradient(135deg,#6a1b9a,#4a148c); }
+  .navBtn[data-group="admin"].active { background:linear-gradient(135deg,#6a1b9a,#4a148c); color:white; }
   .navBtn[data-group="dashboard"] { background:#202124; color:white; }
-  .navBtn[data-group="dashboard"].active { background:#202124; box-shadow:0 2px 8px rgba(0,0,0,.3); }
+  .navBtn[data-group="dashboard"].active { background:#202124; color:white; box-shadow:0 2px 8px rgba(0,0,0,.3); }
+
+  .exportModalOverlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:10000; display:flex; align-items:center; justify-content:center; padding:20px; }
+  .exportModalBox { background:white; border-radius:14px; padding:24px; max-width:420px; width:100%; box-shadow:0 12px 40px rgba(0,0,0,.3); max-height:90vh; overflow-y:auto; }
 
   #pageContent { padding:24px 28px; max-width:1800px; margin:0 auto; }
   #moduleTitle { font-size:20px; font-weight:700; color:#202124; margin-bottom:16px; display:flex; align-items:center; gap:8px; }
@@ -283,6 +286,7 @@
     <div id="headerRight">
       <div id="headerDate"></div>
       <div id="headerExportBtn"></div>
+            <button onclick="openFullAppExportPanel()" style="background:linear-gradient(135deg,#6a1b9a,#4a148c);color:white;border:none;width:auto;padding:9px 16px;">📦 Full App Export</button>
       <button id="logoutBtn" onclick="logout()">⎋ Logout</button>
     </div>
   </div>
@@ -290,6 +294,7 @@
   </div>
   <div id="pageContent">
     <div id="moduleTitle"></div>
+    <div id="moduleExportBtnContainer" style="margin-bottom:12px;"></div>
     <div id="moduleStatusContainer"></div>
     <div id="addBtnContainer"></div>
     <div id="formContainer"></div>
@@ -307,7 +312,7 @@
 <button onclick="sunSendSmart()" style="width:auto;padding:8px 14px;">Send</button>
   </div>
 </div>
-
+<div id="exportModalContainer"></div>
 <script>
   // ============================================
   // BACKEND CONNECTION (GitHub Pages -> Apps Script API)
@@ -491,23 +496,23 @@
       "<tbody>"+rowsHtml.join("")+"</tbody></table>";
   }
 
-  var HEADER_TYPE_PATTERNS = {
-    date:    /date|ending|updated|raised|notified|completed|declared|review date/i,
+    var HEADER_TYPE_PATTERNS = {
+    date:    /date|ending|raised|notified|declared|review date/i,
     yn:      /$y\/n$|^owna$|^fb\/insta$|^website$|promotional|photos|videos|birthday|anniversary|shoutouts|action req|resolved/i,
     compact: /^status$|^role$|^frequency$|sessions booked|occupancy|total enquiries|new enrolments|issue number|centre tours|overall conversion/i,
-    medium:  /^name$|staff name|child name|centre name|author|topic|follow.up owner|next owner|appraisal type|device type|device brand|who declared|allocated/i,
+    medium:  /^name$|staff name|child name|centre name|author|topic|follow.up owner|next owner|appraisal type|device type|device brand|who declared|allocated|^last completed$/i,
     large:   /wins|challenges|description|complaint|impact|resolution|comments|message|notes|work in progress|support required|mitigations|director notes|manager notes/i
   };
   function getHeaderWidth(headerText) {
     var t = headerText.trim();
-    if (HEADER_TYPE_PATTERNS.large.test(t))   return {w:260, wrap:true,  noWrap:false};
-    if (HEADER_TYPE_PATTERNS.date.test(t))    return {w:88,  wrap:false, noWrap:true};
-    if (HEADER_TYPE_PATTERNS.yn.test(t))      return {w:52,  wrap:false, noWrap:true};
-    if (HEADER_TYPE_PATTERNS.compact.test(t)) return {w:80,  wrap:false, noWrap:true};
-    if (HEADER_TYPE_PATTERNS.medium.test(t))  return {w:130, wrap:false, noWrap:false};
+    if (/^last updated$/i.test(t)) return null;
+    if (HEADER_TYPE_PATTERNS.large.test(t))    return {w:260, wrap:true,  noWrap:false};
+    if (HEADER_TYPE_PATTERNS.date.test(t))     return {w:100, wrap:false, noWrap:true};
+    if (HEADER_TYPE_PATTERNS.yn.test(t))       return {w:60,  wrap:false, noWrap:true};
+    if (HEADER_TYPE_PATTERNS.compact.test(t))  return {w:95,  wrap:false, noWrap:true};
+    if (HEADER_TYPE_PATTERNS.medium.test(t))   return {w:150, wrap:true,  noWrap:false};
     return null;
   }
-
   function autoSizeTable(tableEl) {
     if (!tableEl || tableEl.dataset.autosized === '1') return;
     var rows = tableEl.rows;
@@ -623,8 +628,13 @@
     if(f[1]) d.setMonth(d.getMonth()+f[1]);
     return d;
   }
-  function formatDateNice(d) { var m=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]; return d.getDate()+" "+m[d.getMonth()]+" "+d.getFullYear(); }
-  function computeComplianceStatus(record) {
+    function formatDateNice(d) { 
+    var m=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]; 
+    var dd = String(d.getDate()).padStart(2, '0');
+    var yy = String(d.getFullYear()).slice(-2);
+    return dd + "/" + m[d.getMonth()] + "/" + yy; 
+  }
+    function computeComplianceStatus(record) {
     var dates=[]; for(var i=1;i<=6;i++) dates.push(record["Completion Date "+i]||"");
     var parsed = dates.map(parseFlexibleDate).filter(function(d){return d!==null;}), latest=null;
     parsed.forEach(function(d){if(!latest||d>latest)latest=d;});
@@ -633,7 +643,7 @@
       if(!manualNextDue) return {nextDueDisplay:"—",urgency:"na"};
       var pm=parseFlexibleDate(manualNextDue); if(!pm) return {nextDueDisplay:manualNextDue,urgency:"unknown"};
       var days=Math.floor((pm-new Date())/86400000);
-      return {nextDueDisplay:manualNextDue, urgency: days<0?"overdue":(days<=30?"soon":"ok")};
+      return {nextDueDisplay:formatDateNice(pm), urgency: days<0?"overdue":(days<=30?"soon":"ok")};
     }
     if (!latest) return {nextDueDisplay:"—", urgency:"nodata"};
     var nextDueDate = addFrequencyInterval(latest, frequency);
@@ -649,7 +659,9 @@
   }
   function renderDateWithButton(dateStr,linkStr,rowNum,slotIndex,editable) {
     if(!dateStr) return "<span style='color:#999;'>—</span>";
-    var out = escapeHtml(dateStr)+"<br>";
+    var parsedDate = parseFlexibleDate(dateStr);
+    var displayDate = parsedDate ? formatDateNice(parsedDate) : dateStr;
+    var out = escapeHtml(displayDate)+"<br>";
     if(linkStr){
       out+="<a href='"+escapeHtml(linkStr)+"' target='_blank' style='text-decoration:none;'><button type='button' class='miniBtn' style='padding:2px 6px;'>📄 View</button></a>";
       if(editable) out+=" <button type='button' class='miniBtn' style='padding:2px 6px;background:#999;' onclick=\"promptEditComplianceLink("+rowNum+","+slotIndex+")\">✏️</button>";
@@ -792,11 +804,9 @@
     document.getElementById('headerGreeting').textContent=getGreeting()+", "+user.label.split(" ")[0]+" 👋";
     document.getElementById('headerMeta').innerHTML="<span class='roleBadge "+getRoleBadgeClass(user.role)+"'>"+user.role+"</span><span class='centreBadge'>📍 "+(user.centreId==='ALL'?'All Centres':'LB Lalor Rd')+"</span>"+(isMasterAdmin()?"<span class='masterBadge'>MASTER ACCESS</span>":"");
     document.getElementById('headerDate').textContent=formatHeaderDate();
-    var exportBtn=document.getElementById('headerExportBtn');
-    if(user.role==='Director'){
-      exportBtn.innerHTML="<button onclick='triggerDirectorExport()' style='background:linear-gradient(135deg,#188038,#146c2e);' class='exportBtnStyle'>📥 Export My Centre</button><div id='exportStatus' style='font-size:11px;font-weight:bold;margin-top:3px;text-align:right;'></div>";
-    } else if(user.role==='Approved Provider'){
-      exportBtn.innerHTML="<div style='display:flex;gap:6px;align-items:center;'><button onclick='triggerFullExport()' style='background:linear-gradient(135deg,#188038,#146c2e);' class='exportBtnStyle'>📥 Export All</button><button onclick='triggerCredentialsExport()' style='background:#d93025;' class='exportBtnStyle'>🔐 Credentials</button><button onclick='triggerArchive()' style='background:#f9ab00;color:#7a5600;' class='exportBtnStyle'>🗄️ Archive</button></div><div id='exportStatus' style='font-size:11px;font-weight:bold;margin-top:3px;text-align:right;'></div>";
+        var exportBtn=document.getElementById('headerExportBtn');
+    if(user.role==='Approved Provider'){
+      exportBtn.innerHTML="<div style='display:flex;gap:6px;align-items:center;'><button onclick='triggerCredentialsExport()' style='background:#d93025;' class='exportBtnStyle'>🔐 Credentials</button><button onclick='triggerArchive()' style='background:#f9ab00;color:#7a5600;' class='exportBtnStyle'>🗄️ Archive</button></div><div id='exportStatus' style='font-size:11px;font-weight:bold;margin-top:3px;text-align:right;'></div>";
     } else {
       exportBtn.innerHTML="<div id='exportStatus'></div>";
     }
@@ -851,7 +861,7 @@
     });
   }
 
-  function switchModule(key) {
+    function switchModule(key) {
     currentModule=key; setActiveNav(key);
     ['comparisonContainer','moduleStatusContainer','addBtnContainer','formContainer'].forEach(function(id){document.getElementById(id).innerHTML="";});
     document.getElementById('formContainer').style.display="none";
@@ -863,7 +873,6 @@
     if(key==='weekly'){ renderWeeklyReportForm(); loadWeeklyModule(); return; }
     renderAddForm(key); loadSingleModule(key);
   }
-
   function renderAddForm(key) {
     var mod=MODULES[key], addBtnContainer=document.getElementById('addBtnContainer'), formContainer=document.getElementById('formContainer');
     var allowedRoles=mod.addableByRoles||["Director"];
@@ -1043,7 +1052,11 @@
       "<span><span class='statusEmoji'>🔺</span> Pending Manager/AP Review</span></div>";
     var rows=centres.map(function(c){
       var s=statusForSheet[c.id]||{};
-      var updatedText = s.updated ? (s.updated.date+" by "+s.updated.user) : (s.legacy?"<em>Legacy data</em>":"No submissions yet");
+      var updatedText = s.updated
+        ? (s.updated.date+" by "+s.updated.user)
+        : (s.legacy
+            ? (s.legacyDateDisplay ? s.legacyDateDisplay : "Date not recorded")
+            : "No submissions yet");
       var selfCell=buildReviewCell(s.selfReview,s.selfPending,s.hasActivity,isDirector,sheetName,c.id,'Director','director');
       var oversightCell=buildReviewCell(s.oversightReview,s.oversightPending,s.hasActivity,isOversight,sheetName,c.id,currentUser.role,'manager');
       return "<tr><td>"+c.name+"</td><td>"+updatedText+"</td><td>"+selfCell+"</td><td>"+oversightCell+"</td></tr>";
@@ -1108,6 +1121,19 @@
     if(!_dataCache[cacheKeyFor([mod.sheet],currentUser.centreId)]){document.getElementById('moduleStatusContainer').innerHTML="<p id='loadingMsg'>Loading...</p>";document.getElementById('tableContainer').innerHTML="";}
     fetchDashboardDataCached([mod.sheet],currentUser.centreId,function(data){ if(currentModule===key) renderComplianceModuleData(key,data); });
   }
+  function getLatestCompletionInfo(r) {
+    var latestDate = null, count = 0;
+    for (var i=1; i<=6; i++) {
+      var raw = r["Completion Date "+i];
+      if (raw && String(raw).trim()!=="") {
+        count++;
+        var d = parseFlexibleDate(raw);
+        if (d && (!latestDate || d>latestDate)) latestDate=d;
+      }
+    }
+    return { display: latestDate ? formatDateNice(latestDate) : "—", count: count };
+  }
+
   function renderComplianceTable(records) {
     var tableContainer=document.getElementById('tableContainer'); records=safeArray(records);
     if(records.length===0){tableContainer.innerHTML="<p style='color:#666;padding:16px 0;'>No certificate items found yet.</p>";return;}
@@ -1120,23 +1146,90 @@
     });
     var canAdd=["Director","Area Manager","Approved Provider"].indexOf(currentUser.role)!==-1;
     var canDelete=currentUser.role==='Approved Provider';
-    var headers=["Item","Frequency"]; for(var i=1;i<=6;i++) headers.push("Date "+i);
-    headers=headers.concat(["Next Due","Status","Vendor/Contact","Notes"]); if(canAdd) headers.push("Action");
+    var headers=["Item","Frequency","Last Completed","Next Due","Status","Vendor/Contact","Notes"];
+    if(canAdd) headers.push("Action");
     var rows=records.map(function(r){
       var status=computeComplianceStatus(r), rowClass=status.urgency==="overdue"?"overdue":status.urgency==="soon"?"soon":"";
+      var rowNum=r["_rowNumber"];
+      var latestInfo=getLatestCompletionInfo(r);
+
+      var historyRows="";
+      for(var i=1;i<=6;i++){
+        historyRows+="<div style='margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid #eee;'><strong>Date "+i+":</strong><br>"+renderDateWithButton(r["Completion Date "+i],r["Link "+i],rowNum,i,canAdd)+"</div>";
+      }
+      var lastCompletedCell = "<div>"+escapeHtml(latestInfo.display)+"</div>"+
+        "<button type='button' class='miniBtn' style='margin-top:4px;background:#666;' onclick=\"toggleComplianceHistory("+rowNum+")\">📅 History ("+latestInfo.count+"/6)</button>"+
+        "<div id='complianceHistory_"+rowNum+"' style='display:none;margin-top:8px;padding:10px;background:#f7f8fc;border-radius:8px;'>"+historyRows+"</div>";
+
       var cells="<td>"+escapeHtml(r["Item"])+"</td><td>"+escapeHtml(r["Frequency"])+"</td>";
-      for(var i=1;i<=6;i++) cells+="<td>"+renderDateWithButton(r["Completion Date "+i],r["Link "+i],r["_rowNumber"],i,canAdd)+"</td>";
+      cells+="<td>"+lastCompletedCell+"</td>";
       cells+="<td>"+escapeHtml(status.nextDueDisplay)+"</td><td>"+renderUrgencyBadge(status.urgency)+"</td><td>"+escapeHtml(r["Vendor/Contact"])+"</td><td>"+escapeHtml(r["Notes"])+"</td>";
+
       if(canAdd){
-        var rowNum=r["_rowNumber"];
-        cells+="<td><button class='miniBtn' onclick=\"toggleAddDateForm("+rowNum+")\">➕ Add Date</button>"+
+        var editFormHtml = "<div class='addDateForm' id='editComplianceForm_"+rowNum+"' style='display:none;margin-top:8px;'>"+
+          "<label>Item</label><input type='text' id='editItem_"+rowNum+"' value=\""+escapeHtml(r["Item"])+"\">"+
+          "<label>Frequency</label><select id='editFrequency_"+rowNum+"'>"+FREQ_OPTIONS.map(function(f){return "<option value='"+f+"'"+(f===r["Frequency"]?" selected":"")+">"+f+"</option>";}).join("")+"</select>"+
+          "<label>Vendor/Contact</label><input type='text' id='editVendor_"+rowNum+"' value=\""+escapeHtml(r["Vendor/Contact"])+"\">"+
+          "<label>Notes</label><textarea id='editNotes_"+rowNum+"' rows='2'>"+escapeHtml(r["Notes"])+"</textarea>"+
+          "<label>Next Due (only used if Frequency = Static)</label><input type='date' id='editNextDue_"+rowNum+"' value='"+(function(){var d=parseFlexibleDate(r["Next Due"]);return d?d.toISOString().split('T')[0]:'';})()+"'>"+
+          "<div style='margin-top:10px;padding-top:10px;border-top:1px dashed #ccc;'><strong style='font-size:12px;'>Correct an existing completion date/link:</strong>"+
+          (function(){
+            var out="";
+            for(var i=1;i<=6;i++){
+              var rawDate=r["Completion Date "+i], parsedD=parseFlexibleDate(rawDate);
+              var dateVal=parsedD?parsedD.toISOString().split('T')[0]:'';
+              out+="<div style='display:flex;gap:6px;margin-top:6px;align-items:center;'><span style='font-size:11px;width:50px;'>Slot "+i+"</span><input type='date' id='editSlotDate_"+rowNum+"_"+i+"' value='"+dateVal+"' style='margin:0;'><input type='text' id='editSlotLink_"+rowNum+"_"+i+"' placeholder='Document link' value=\""+escapeHtml(r["Link "+i]||"")+"\" style='margin:0;'></div>";
+            }
+            return out;
+          })()+
+          "</div>"+
+          "<button onclick=\"submitComplianceEdit("+rowNum+")\">💾 Save Changes</button><div id='editComplianceStatus_"+rowNum+"'></div>"+
+          "</div>";
+
+        cells+="<td><button class='miniBtn' onclick=\"toggleComplianceEditForm("+rowNum+")\">✏️ Edit</button>"+
+          "<button class='miniBtn' onclick=\"toggleAddDateForm("+rowNum+")\">➕ Add Date</button>"+
           (canDelete ? "<button class='miniBtn' style='background:#d93025;margin-top:4px;' onclick=\"deleteComplianceItem("+rowNum+")\">🗑️ Delete</button>" : "<span style='font-size:10px;color:#999;display:block;margin-top:4px;'>🔒 Raise deletion in Discussion Points</span>")+
+          editFormHtml+
           "<div class='addDateForm' id='addDateForm_"+rowNum+"' style='display:none;'><label>New Completion Date</label><input type='date' id='newDate_"+rowNum+"'><label>Document Link (optional)</label><input type='text' id='newLink_"+rowNum+"' placeholder='Paste Google Drive link'><button onclick=\"submitNewComplianceDate("+rowNum+")\">Save</button><div id='addDateStatus_"+rowNum+"'></div></div></td>";
       }
       return "<tr class='"+rowClass+"'>"+cells+"</tr>";
     });
     tableContainer.innerHTML=buildTable(headers,rows);
   }
+
+  function toggleComplianceHistory(rowNum){
+    var f=document.getElementById('complianceHistory_'+rowNum);
+    f.style.display=(f.style.display==='none'||f.style.display==='')?'block':'none';
+  }
+
+  function toggleComplianceEditForm(rowNum){
+    var f=document.getElementById('editComplianceForm_'+rowNum);
+    f.style.display=(f.style.display==='none'||f.style.display==='')?'block':'none';
+  }
+
+  function submitComplianceEdit(rowNum){
+    var fields={};
+    fields["Item"]=document.getElementById('editItem_'+rowNum).value.trim();
+    fields["Frequency"]=document.getElementById('editFrequency_'+rowNum).value;
+    fields["Vendor/Contact"]=document.getElementById('editVendor_'+rowNum).value.trim();
+    fields["Notes"]=document.getElementById('editNotes_'+rowNum).value.trim();
+    var nextDueVal=document.getElementById('editNextDue_'+rowNum).value;
+    fields["Next Due"]=nextDueVal?formatDateNice(new Date(nextDueVal)):"";
+
+    for(var i=1;i<=6;i++){
+      var dateVal=document.getElementById('editSlotDate_'+rowNum+'_'+i).value;
+      var linkVal=document.getElementById('editSlotLink_'+rowNum+'_'+i).value.trim();
+      fields["Completion Date "+i]=dateVal?formatDateNice(new Date(dateVal)):"";
+      fields["Link "+i]=linkVal;
+    }
+
+    var s=document.getElementById('editComplianceStatus_'+rowNum);
+    s.innerText="Saving...";
+    callBackend('updateComplianceItem',[currentUser.token,rowNum,fields])
+      .then(function(result){ s.innerText=result; loadComplianceModule(currentModule); })
+      .catch(function(e){ handleAuthError(e,s); });
+  }
+
   function deleteComplianceItem(rowNum) {
     if(!confirm("Delete this compliance item permanently? Consider raising a Discussion Point instead.")) return;
     callBackend('deleteRowByNumber',[currentUser.token,'Compliance_Certificates_Renewals',rowNum])
@@ -1268,6 +1361,67 @@
     var mod=MODULES[currentModule];
     callBackend('deleteChecklistItem',[currentUser.token,mod.sheet,taskId]).then(function(result){ alert(result); loadAnyChecklistModule(currentModule); }).catch(function(e){ handleAuthError(e); });
   }
+       function downloadBase64File(base64, filename, mimeType) {
+    var byteChars = atob(base64);
+    var byteNumbers = new Array(byteChars.length);
+    for (var i=0; i<byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
+    var byteArray = new Uint8Array(byteNumbers);
+    var blob = new Blob([byteArray], { type: mimeType });
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement('a');
+    link.href = url; link.download = filename;
+    document.body.appendChild(link); link.click(); document.body.removeChild(link);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+  }
+
+  function getDefaultExportDates() {
+    var end = new Date();
+    var start = new Date();
+    start.setDate(start.getDate() - 28);
+    var toIso = function(d){ return d.toISOString().split('T')[0]; };
+    return { start: toIso(start), end: toIso(end) };
+  }
+
+  function openFullAppExportPanel() {
+    var defaults = getDefaultExportDates();
+    var html = "<div class='exportModalOverlay' id='exportModalOverlay'><div class='exportModalBox'>";
+    html += "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;'><h3 style='margin:0;'>📦 Full App Export</h3><span style='cursor:pointer;font-size:20px;' onclick='closeFullAppExportPanel()'>✕</span></div>";
+    html += "<p style='font-size:12px;color:#666;margin-bottom:12px;'>Exports every module into one Excel file, with one tab per module — organised exactly like this app. Date range applies only to Weekly Reports, Complaints, Appraisals, AP Feedback, and Discussion Points. All other modules always export their current full state.</p>";
+    html += "<label>Start Date</label><input type='date' id='fullExportStartDate' value='"+defaults.start+"'>";
+    html += "<label>End Date</label><input type='date' id='fullExportEndDate' value='"+defaults.end+"'>";
+    html += "<p style='font-size:12px;color:#666;margin-top:10px;'>"+
+      (currentUser.role === 'Director' ? "This will export data for your centre only." : "This will export data for all centres you have access to.")+
+      "</p>";
+    html += "<div id='fullExportStatus' style='margin-top:6px;font-weight:bold;'></div>";
+    html += "<div style='display:flex;gap:10px;margin-top:16px;'><button style='background:#999;' onclick='closeFullAppExportPanel()'>Cancel</button><button onclick='submitFullAppExport()'>📥 Export</button></div>";
+    html += "</div></div>";
+    document.getElementById('exportModalContainer').innerHTML = html;
+  }
+
+  function closeFullAppExportPanel() {
+    document.getElementById('exportModalContainer').innerHTML = "";
+  }
+
+  function submitFullAppExport() {
+    var startDate = document.getElementById('fullExportStartDate').value;
+    var endDate = document.getElementById('fullExportEndDate').value;
+    var s = document.getElementById('fullExportStatus');
+    s.style.color = '#333'; s.innerText = 'Preparing export... this may take a moment.';
+    callBackend('exportFullAppData', [currentUser.token, startDate, endDate]).then(function(result) {
+      downloadBase64File(result.base64, result.filename, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      s.style.color = '#188038'; s.innerText = '✅ Downloaded!';
+    }).catch(function(e){ handleAuthError(e, s); });
+  }
+
+  function triggerDashboardPdfExport() {
+    var s = document.getElementById('dashboardExportStatus');
+    if (s) { s.innerText = 'Preparing PDF...'; s.style.color = '#333'; }
+    callBackend('exportDashboardSummaryPdf', [currentUser.token]).then(function(result) {
+      downloadBase64File(result.base64, result.filename, 'application/pdf');
+      if (s) { s.innerText = '✅ Downloaded!'; s.style.color = '#188038'; }
+    }).catch(function(e){ handleAuthError(e, s); });
+  }
+
     function loadUserMgmtModule() {
     if(!isMasterAdmin()){ document.getElementById('tableContainer').innerHTML="<p class='errorMsg'>❌ Only the Approved Provider can access this section.</p>"; return; }
     document.getElementById('tableContainer').innerHTML="<p id='loadingMsg'>Loading...</p>";
@@ -1378,7 +1532,7 @@
     return "<span class='statusEmoji' title='" + tooltip + "'>🔺</span>";
   }
 
-  function renderDashboardData(data) {
+    function renderDashboardData(data) {
     try {
       if (!data || data.error) { document.getElementById('tableContainer').innerHTML = "<p class='errorMsg'>❌ " + (data && data.error ? data.error : "Unknown error.") + "</p>"; return; }
       var records = data.records || {}, flags = [], centres = safeArray(data.centres);
@@ -1398,7 +1552,8 @@
       var latestWeekly=null, latestWeeklyDate=null;
       safeArray(records["Weekly_Report"]).forEach(function(r){ if(r["Week Ending"]){ var d=new Date(r["Week Ending"]); if(!latestWeeklyDate||d>latestWeeklyDate){latestWeeklyDate=d;latestWeekly=r;} } });
 
-      var html = "<div class='dashGrid2'>";
+      var html = "<div style='margin-bottom:14px;display:flex;align-items:center;gap:10px;'><button onclick='triggerDashboardPdfExport()' style='width:auto;padding:8px 16px;background:linear-gradient(135deg,#6a1b9a,#4a148c);'>🖨 Export Summary PDF</button><span id='dashboardExportStatus' style='font-size:12px;font-weight:bold;'></span></div>";
+      html += "<div class='dashGrid2'>";
 
       html += "<div class='card' style='border-left:4px solid " + (flags.length===0?"#188038":"#d93025") + ";'>";
       html += "<div class='card-title'>" + (flags.length===0?"✅":"🔴") + " Needs Your Action" + (flags.length>0?" ("+flags.length+")":"") + "</div>";
@@ -1656,6 +1811,11 @@ async function sunSendSmart() {
     var val = inputEl.value.trim();
     if (!val) return;
 
+    if (!currentUser || !currentUser.token) {
+        alert("Please log in first to use Sunshine.");
+        return;
+    }
+
     var msgs = document.getElementById('botMessages');
     var userDiv = document.createElement('div');
     userDiv.className = 'botMsg botMsg-user';
@@ -1667,13 +1827,18 @@ async function sunSendSmart() {
     botDiv.className = 'botMsg botMsg-bot';
     botDiv.textContent = "Sunshine is thinking...";
     msgs.appendChild(botDiv);
+    msgs.scrollTop = msgs.scrollHeight;
 
     try {
-        // This calls the askSunshine action we added to Code.gs
-        const res = await callBackend('askSunshine', [val]);
+        const res = await callBackend('askSunshine', [currentUser.token, val]);
         botDiv.textContent = res;
     } catch (e) {
-        botDiv.textContent = "Sorry, I couldn't reach the AI brain. Please try again.";
+        console.error("Sunshine error:", e);
+        if (handleAuthError(e)) {
+            botDiv.textContent = "Your session has expired — please log in again.";
+        } else {
+            botDiv.textContent = "Error: " + e.message;
+        }
     }
     msgs.scrollTop = msgs.scrollHeight;
 }
