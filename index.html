@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Learning Blocks — Compliance Reporting</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <div id="app">
+
+    <!-- TOP BAR: loads once, stays forever, never reloads -->
+    <header id="top-bar" class="top-bar hidden">
+      <div class="top-bar-left">
+        <button id="mobile-nav-toggle" class="mobile-nav-toggle">☰</button>
+        <span class="app-logo">Learning Blocks</span>
+        <span class="app-subtitle">Compliance Reporting</span>
+      </div>
+      <div class="top-bar-right">
+        <span id="user-display" class="user-display"></span>
+        <button id="export-btn" class="btn btn-secondary btn-small">⬇ Export</button>
+        <button id="logout-btn" class="btn btn-secondary btn-small">Logout ⏻</button>
+      </div>
+    </header>
+
+    <div class="app-body">
+
+      <!-- SIDE NAV: populated dynamically by app.js based on role -->
+      <nav id="side-nav" class="side-nav hidden">
+        <ul id="nav-list" class="nav-list"></ul>
+      </nav>
+
+      <!-- CONTENT AREA: the "picture frame" — this is what swaps -->
+      <main class="content-area">
+        <div id="loading-skeleton" class="skeleton hidden">
+          <div class="skeleton-line skeleton-line-title"></div>
+          <div class="skeleton-line"></div>
+          <div class="skeleton-line"></div>
+          <div class="skeleton-line skeleton-line-short"></div>
+        </div>
+        <div id="view-container"></div>
+      </main>
+
+    </div>
+  </div>
+
+  <!-- MODAL: reused for password confirmations, add-row forms, etc. -->
+  <div id="modal-overlay" class="modal-overlay hidden">
+    <div id="modal-box" class="modal-box"></div>
+  </div>
+
+  <!-- TOAST: reused for success/error messages -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="api.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

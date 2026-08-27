@@ -1,0 +1,102 @@
+<div class="flex-between mt-1" style="margin-bottom:1rem;">
+  <h2 style="margin:0;">Discussion Points</h2>
+  <div id="dp-centre-selector-wrapper" class="hidden" style="min-width:220px;">
+    <select id="dp-centre-select"></select>
+  </div>
+</div>
+<div class="flex-gap mt-1" style="margin-bottom:1rem;">
+  <select id="dp-filter">
+    <option value="OpenWIP">Open + WIP</option>
+    <option value="Open">Open only</option>
+    <option value="WIP">WIP only</option>
+    <option value="Closed">Closed (last 3 months)</option>
+    <option value="Deferred">Deferred (last 3 months)</option>
+    <option value="ShowAll">Show All</option>
+  </select>
+  <button class="btn btn-secondary btn-small" id="dp-add-btn">+ Add Topic</button>
+</div>
+<div id="dp-content"></div>
+
+<script>
+async function initDiscussionPoints() {
+  const session = Session.get();
+  const isAdmin = session.role === 'Area Manager' || session.role === 'Approved Provider';
+  const wrapper = document.getElementById('dp-centre-selector-wrapper');
+  let activeCentreId = session.centreId;
+
+  if (isAdmin) {
+    wrapper.classList.remove('hidden');
+    const selectEl = document.getElementById('dp-centre-select');
+    await populateCentreSelect(selectEl, function(centreId) { activeCentreId = centreId; renderDiscussionPoints(centreId); });
+  } else {
+    wrapper.classList.add('hidden');
+    renderDiscussionPoints(session.centreId);
+  }
+
+  document.getElementById('dp-filter').addEventListener('change', function() { renderDiscussionPoints(activeCentreId); });
+
+  document.getElementById('dp-add-btn').addEventListener('click', function() {
+    showModal(
+      '<h3 class="card-title">Add Discussion Topic</h3>' +
+      '<div class="form-group"><label>Topic</label><input type="text" id="dp-topic"></div>' +
+      '<div class="flex-gap" style="justify-content:flex-end;"><button class="btn btn-secondary" id="dp-cancel">Cancel</button><button class="btn btn-primary" id="dp-confirm">Add</button></div>'
+    );
+    document.getElementById('dp-cancel').addEventListener('click', closeModal);
+    document.getElementById('dp-confirm').addEventListener('click', async function() {
+      const topic = document.getElementById('dp-topic').value.trim();
+      if (!topic) { showToast('Please enter a topic.', 'error'); return; }
+      closeModal();
+      await api('addDiscussionPoint', topic, activeCentreId);
+      showToast('Topic added.', 'success');
+      renderDiscussionPoints(activeCentreId);
+    });
+  });
+}
+
+function statusSelectHtml(rowIndex, value) {
+  const options = ['Open', 'WIP', 'Closed', 'Deferred'];
+  let html = '<select data-row="' + rowIndex + '" data-field="Status">';
+  options.forEach(function(o) { html += '<option value="' + o + '" ' + (value === o ? 'selected' : '') + '>' + o + '</option>'; });
+  return html + '</select>';
+}
+
+async function renderDiscussionPoints(centreId) {
+  const contentEl = document.getElementById('dp-content');
+  contentEl.innerHTML = '<p class="text-muted">Loading...</p>';
+  const filter = document.getElementById('dp-filter').value;
+  const items = await api('getDiscussionPoints', centreId, filter);
+
+  if (items.length === 0) { contentEl.innerHTML = '<p class="text-muted">No discussion points match this filter.</p>'; return; }
+
+    let html = '<div class="data-table"><div class="table-header">' +
+    renderHeaderCell('col-text-short', 'Topic', 'Discussion Points', 'Topic') +
+    renderHeaderCell('col-narrow', 'Discussion Needed', 'Discussion Points', 'DiscussionNeeded') +
+    renderHeaderCell('col-narrow', 'Follow-Up', 'Discussion Points', 'FollowUpRequired') +
+    renderHeaderCell('col-narrow', 'Status', 'Discussion Points', 'Status') +
+    renderHeaderCell('col-text-long', 'Comments', 'Discussion Points', 'Comments') + '</div>';
+
+  items.forEach(function(item) {
+    html += '<div class="table-row">';
+    html += '<div class="col-text-short" data-label="Topic"><strong>' + item.topic + '</strong></div>';
+    html += '<div class="col-narrow" data-label="Discussion Needed">' + ynSelectHtml(item.rowIndex, 'DiscussionNeeded', item.discussionNeeded, false) + '</div>';
+    html += '<div class="col-narrow" data-label="Follow-Up">' + ynSelectHtml(item.rowIndex, 'FollowUpRequired', item.followUpRequired, false) + '</div>';
+    html += '<div class="col-narrow" data-label="Status">' + statusSelectHtml(item.rowIndex, item.status) + '</div>';
+    html += '<div class="col-text-long" data-label="Comments">' + textareaHtml(item.rowIndex, 'Comments', item.comments, false) + '</div>';
+    html += '</div>';
+  });
+  html += '</div>';
+  contentEl.innerHTML = html;
+
+  contentEl.addEventListener('change', function(e) {
+    if (!e.target.dataset.field) return;
+    api('saveDiscussionPointField', centreId, Number(e.target.dataset.row), e.target.dataset.field, e.target.value).then(function() {
+      if (e.target.dataset.field === 'Status') renderDiscussionPoints(centreId);
+    });
+  });
+  contentEl.addEventListener('focusout', function(e) {
+    if (e.target.tagName === 'TEXTAREA' && e.target.dataset.field) {
+      api('saveDiscussionPointField', centreId, Number(e.target.dataset.row), e.target.dataset.field, e.target.value);
+    }
+  });
+}
+</script>
