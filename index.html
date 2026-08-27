@@ -21,8 +21,8 @@
       </div>
       <div class="top-bar-right">
         <span id="user-display" class="user-display"></span>
-        <button id="export-btn" class="btn btn-secondary btn-small">⬇ Export</button>
-        <button id="logout-btn" class="btn btn-secondary btn-small">Logout ⏻</button>
+        <button id="export-btn" class="btn btn-topbar btn-small">⬇ Export</button>
+        <button id="logout-btn" class="btn btn-topbar btn-small">Logout ⏻</button>
       </div>
     </header>
 
@@ -30,6 +30,13 @@
 
       <!-- SIDE NAV: populated dynamically by app.js based on role -->
       <nav id="side-nav" class="side-nav hidden">
+        <div class="nav-legend">
+          <div class="legend-item"><span class="legend-dot legend-blue"></span> Auto-calculated</div>
+          <div class="legend-item"><span class="legend-dot legend-amber"></span> Needs your input</div>
+          <div class="legend-item"><span class="legend-dot legend-purple"></span> Management</div>
+          <div class="legend-item"><span class="legend-dot legend-wine"></span> Admin only</div>
+          <div class="legend-item"><span class="legend-dot legend-red"></span> Provider only</div>
+        </div>
         <ul id="nav-list" class="nav-list"></ul>
       </nav>
 
