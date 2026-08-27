@@ -1,0 +1,29 @@
+<div class="flex-between mt-1" style="margin-bottom:1rem;">
+  <h2 style="margin:0;">Monthly Programming</h2>
+  <div id="mp-centre-selector-wrapper" class="hidden" style="min-width:220px;">
+    <select id="mp-centre-select"></select>
+  </div>
+</div>
+<div id="mp-header"></div>
+<div id="mp-content" class="mt-1"></div>
+
+<script>
+async function initMonthlyProgramming() {
+  const session = Session.get();
+  const isAdmin = session.role === 'Area Manager' || session.role === 'Approved Provider';
+  const headerEl = document.getElementById('mp-header');
+  const contentEl = document.getElementById('mp-content');
+  const wrapper = document.getElementById('mp-centre-selector-wrapper');
+
+  if (isAdmin) {
+    wrapper.classList.remove('hidden');
+    const selectEl = document.getElementById('mp-centre-select');
+    await populateCentreSelect(selectEl, function(centreId) {
+      renderChecklistTab('Monthly Programming', contentEl, headerEl, centreId);
+    });
+  } else {
+    wrapper.classList.add('hidden');
+    renderChecklistTab('Monthly Programming', contentEl, headerEl, session.centreId);
+  }
+}
+</script>

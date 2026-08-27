@@ -1,0 +1,107 @@
+<div class="flex-between mt-1" style="margin-bottom:1rem;">
+  <h2 style="margin:0;">New / Saved Report</h2>
+  <div id="nr-centre-selector-wrapper" class="hidden" style="min-width:220px;">
+    <select id="nr-centre-select"></select>
+  </div>
+</div>
+
+<div id="nr-content"></div>
+
+<script>
+async function initNewReport() {
+  const session = Session.get();
+  const isAdmin = session.role === 'Area Manager' || session.role === 'Approved Provider';
+  const contentEl = document.getElementById('nr-content');
+  const selectorWrapper = document.getElementById('nr-centre-selector-wrapper');
+
+  if (isAdmin) {
+    selectorWrapper.classList.remove('hidden');
+    const selectEl = document.getElementById('nr-centre-select');
+    await populateCentreSelect(selectEl, function(centreId) {
+      renderReportBoard(centreId, contentEl, true);
+    });
+  } else {
+    selectorWrapper.classList.add('hidden');
+    renderReportBoard(session.centreId, contentEl, false);
+  }
+}
+
+async function renderReportBoard(centreId, contentEl, isAdmin) {
+  contentEl.innerHTML = '<p class="text-muted">Loading...</p>';
+  const data = await api('getReportBoardData', centreId);
+  let html = '';
+
+  html += '<div class="card"><h3 class="card-title">' + data.currentPeriod.monthName + ' ' + data.currentPeriod.year + '</h3>';
+  html += '<p class="text-muted">Closes: ' + data.periodCloseDisplay + '</p>';
+  html += '<div class="data-table mt-1"><div class="table-header"><div class="col-text-short">Category</div><div class="col-text-short">Status</div><div class="col-date">Last Updated</div></div>';
+  data.categoryStatuses.forEach(function(c) {
+    html += '<div class="table-row"><div class="col-text-short" data-label="Category">' + c.category + '</div>' +
+      '<div class="col-text-short" data-label="Status">' + c.statusLabel + '</div>' +
+      '<div class="col-date" data-label="Last Updated">' + c.lastUpdatedDisplay + '</div></div>';
+  });
+  html += '</div>';
+
+  if (!isAdmin) {
+    html += '<button class="btn btn-primary mt-1" id="submit-month-btn">Submit Month for Review</button>';
+  } else {
+    html += '<button class="btn btn-primary mt-1" id="close-month-btn">Close Month</button>';
+  }
+  html += '</div>';
+
+  if (data.backlog.length > 0) {
+    html += '<div class="card"><h3 class="card-title" style="color:var(--red);">⚠ Backlog — ' + data.backlog.length + ' month(s) pending</h3><div class="data-table">';
+    data.backlog.forEach(function(b) {
+      html += '<div class="table-row"><div class="col-text-short" data-label="Month">' + b.monthName + '</div>' +
+        '<div class="col-text-short" data-label="Open Categories">' + b.openCategoriesCount + ' categories still open</div></div>';
+    });
+    html += '</div></div>';
+  }
+
+  html += '<div class="card"><h3 class="card-title">Past Periods</h3><div class="data-table">';
+  data.pastPeriods.forEach(function(p) {
+    const badge = p.closed ? '<span class="badge badge-green">🟢 Closed</span>' : '<span class="badge badge-yellow">🟡 ' + p.openCategoriesCount + ' open</span>';
+    html += '<div class="table-row"><div class="col-text-short" data-label="Month">' + p.monthName + '</div><div class="col-text-short" data-label="Status">' + badge + '</div></div>';
+  });
+  html += '</div></div>';
+
+  contentEl.innerHTML = html;
+
+  if (!isAdmin) {
+    document.getElementById('submit-month-btn').addEventListener('click', function() {
+      submitMonth(centreId, data.currentPeriod.periodKey, contentEl, isAdmin);
+    });
+  } else {
+    document.getElementById('close-month-btn').addEventListener('click', function() {
+      closeMonthAction(centreId, data.currentPeriod.periodKey, contentEl, isAdmin);
+    });
+  }
+}
+
+async function submitMonth(centreId, periodKey, contentEl, isAdmin) {
+  const result = await api('submitMonthForReview', centreId, periodKey);
+  if (!result.success) {
+    let msg = '<h3 class="card-title">Cannot Submit Yet</h3><p class="text-muted">These categories are not complete:</p><ul>';
+    result.blockers.forEach(function(b) { msg += '<li><strong>' + b.category + '</strong> — ' + b.reason + '</li>'; });
+    msg += '</ul><button class="btn btn-primary" id="modal-ok-btn">OK</button>';
+    showModal(msg);
+    document.getElementById('modal-ok-btn').addEventListener('click', closeModal);
+    return;
+  }
+  showToast('Month submitted for review.', 'success');
+  renderReportBoard(centreId, contentEl, isAdmin);
+}
+
+async function closeMonthAction(centreId, periodKey, contentEl, isAdmin) {
+  const result = await api('closeMonth', centreId, periodKey);
+  if (!result.success) {
+    let msg = '<h3 class="card-title">Cannot Close Month Yet</h3><p class="text-muted">These categories are not yet approved:</p><ul>';
+    result.blockers.forEach(function(b) { msg += '<li><strong>' + b.category + '</strong> — currently: ' + b.status + '</li>'; });
+    msg += '</ul><button class="btn btn-primary" id="modal-ok-btn">OK</button>';
+    showModal(msg);
+    document.getElementById('modal-ok-btn').addEventListener('click', closeModal);
+    return;
+  }
+  showToast('Month closed successfully.', 'success');
+  renderReportBoard(centreId, contentEl, isAdmin);
+}
+</script>

@@ -1,0 +1,29 @@
+<div class="flex-between mt-1" style="margin-bottom:1rem;">
+  <h2 style="margin:0;">Displays</h2>
+  <div id="disp-centre-selector-wrapper" class="hidden" style="min-width:220px;">
+    <select id="disp-centre-select"></select>
+  </div>
+</div>
+<div id="disp-header"></div>
+<div id="disp-content" class="mt-1"></div>
+
+<script>
+async function initDisplays() {
+  const session = Session.get();
+  const isAdmin = session.role === 'Area Manager' || session.role === 'Approved Provider';
+  const headerEl = document.getElementById('disp-header');
+  const contentEl = document.getElementById('disp-content');
+  const wrapper = document.getElementById('disp-centre-selector-wrapper');
+
+  if (isAdmin) {
+    wrapper.classList.remove('hidden');
+    const selectEl = document.getElementById('disp-centre-select');
+    await populateCentreSelect(selectEl, function(centreId) {
+      renderChecklistTab('Displays', contentEl, headerEl, centreId);
+    });
+  } else {
+    wrapper.classList.add('hidden');
+    renderChecklistTab('Displays', contentEl, headerEl, session.centreId);
+  }
+}
+</script>

@@ -1,0 +1,128 @@
+<div class="flex-between mt-1" style="margin-bottom:1rem;">
+  <h2 style="margin:0;">Dashboard</h2>
+  <div id="centre-selector-wrapper" class="hidden" style="min-width:220px;">
+    <select id="dashboard-centre-select"></select>
+  </div>
+</div>
+
+<div id="dashboard-content"></div>
+
+<script>
+const DASH_CATEGORIES = ['OWNA Review','Additional Checks','Monthly Programming','Compliance Certificates','SAWD QIP','Displays'];
+const DASH_CATEGORY_SHORT = {
+  'OWNA Review':'OWNA','Additional Checks':'Add. Checks','Monthly Programming':'Programming',
+  'Compliance Certificates':'Certificates','SAWD QIP':'SAWD QIP','Displays':'Displays'
+};
+
+function freshnessBadgeClass(freshness) {
+  if (freshness === 'green') return 'badge-green';
+  if (freshness === 'yellow') return 'badge-yellow';
+  return 'badge-red';
+}
+function freshnessDot(freshness) {
+  if (freshness === 'green') return '🟢';
+  if (freshness === 'yellow') return '🟡';
+  return '🔴';
+}
+
+async function initDashboard() {
+  const session = Session.get();
+  const isAdmin = session.role === 'Area Manager' || session.role === 'Approved Provider';
+  const contentEl = document.getElementById('dashboard-content');
+  const selectorWrapper = document.getElementById('centre-selector-wrapper');
+
+  if (isAdmin) {
+    selectorWrapper.classList.remove('hidden');
+    const selectEl = document.getElementById('dashboard-centre-select');
+    await populateCentreSelect(selectEl, function(centreId) {
+      renderAdminDashboard(centreId, contentEl);
+    });
+  } else {
+    selectorWrapper.classList.add('hidden');
+    renderDirectorDashboard(contentEl);
+  }
+}
+
+async function renderAdminDashboard(centreId, contentEl) {
+  contentEl.innerHTML = '<p class="text-muted">Loading dashboard...</p>';
+  const data = await api('getAdminDashboardData', centreId);
+  let html = '';
+
+  html += '<div class="card"><h3 class="card-title">Submission Tracker — All Centres</h3><div class="data-table">';
+  html += '<div class="table-header"><div class="col-text-short">Centre</div>';
+  DASH_CATEGORIES.forEach(function(cat) { html += '<div class="col-narrow">' + DASH_CATEGORY_SHORT[cat] + '</div>'; });
+  html += '</div>';
+  data.submissionTracker.forEach(function(row) {
+    html += '<div class="table-row"><div class="col-text-short" data-label="Centre"><strong>' + row.centreName + '</strong></div>';
+    row.categories.forEach(function(c) {
+      html += '<div class="col-narrow" data-label="' + DASH_CATEGORY_SHORT[c.category] + '">' + freshnessDot(c.freshness) + '</div>';
+    });
+    html += '</div>';
+  });
+  html += '</div></div>';
+
+  html += '<div class="card"><h3 class="card-title">Open Items — All Centres</h3><div class="data-table">';
+  html += '<div class="table-header"><div class="col-text-short">Centre</div><div class="col-narrow">Discussion (Open/WIP)</div><div class="col-narrow">Feedback (Open)</div></div>';
+  data.section1B.forEach(function(row) {
+    html += '<div class="table-row"><div class="col-text-short" data-label="Centre">' + row.centreName + '</div>' +
+      '<div class="col-narrow" data-label="Discussion">' + row.discussionOpen + ' / ' + row.discussionWip + '</div>' +
+      '<div class="col-narrow" data-label="Feedback">' + row.feedbackOpen + '</div></div>';
+  });
+  html += '</div></div>';
+
+  html += '<div class="card"><h3 class="card-title">' + data.selectedCentreName + ' — Category Status</h3><div class="data-table">';
+  html += '<div class="table-header"><div class="col-text-short">Category</div><div class="col-date">Last Saved</div><div class="col-text-short">Status</div></div>';
+  data.categoryStatusCards.forEach(function(c) {
+    html += '<div class="table-row"><div class="col-text-short" data-label="Category">' + c.category + '</div>' +
+      '<div class="col-date" data-label="Last Saved">' + c.lastSavedDisplay + '</div>' +
+      '<div class="col-text-short" data-label="Status"><span class="badge ' + freshnessBadgeClass(c.freshness) + '">' + c.statusLabel + '</span></div></div>';
+  });
+  html += '</div></div>';
+
+  if (data.certificatesSummary) {
+    const cs = data.certificatesSummary;
+    html += '<div class="card"><h3 class="card-title">Compliance Certificates Summary</h3><div class="flex-gap">' +
+      '<span class="badge badge-red">🔴 Overdue: ' + cs.overdue + '</span>' +
+      '<span class="badge badge-yellow">🟡 Due Soon: ' + cs.dueSoon + '</span>' +
+      '<span class="badge badge-green">🟢 OK: ' + cs.ok + '</span>' +
+      '<span class="badge badge-grey">⚪ Static: ' + cs.staticCount + '</span></div></div>';
+  }
+
+  if (data.registersSnapshot) {
+    const rs = data.registersSnapshot;
+    html += '<div class="card"><h3 class="card-title">Registers Snapshot</h3><div class="data-table">' +
+      '<div class="table-row"><div class="col-text-short" data-label="Register">Staff Social Media Consent</div><div class="col-date" data-label="Last Updated">' + rs.socialMediaConsent.lastUpdatedDisplay + '</div><div class="col-narrow" data-label="Status">' + freshnessDot(rs.socialMediaConsent.freshness) + '</div></div>' +
+      '<div class="table-row"><div class="col-text-short" data-label="Register">Supplied Devices</div><div class="col-date" data-label="Last Updated">' + rs.suppliedDevices.lastUpdatedDisplay + '</div><div class="col-narrow" data-label="Status">' + freshnessDot(rs.suppliedDevices.freshness) + '</div></div>' +
+      '<div class="table-row"><div class="col-text-short" data-label="Register">Appraisals &amp; Meetings</div><div class="col-date" data-label="Last Updated">' + rs.appraisalsMeetings.lastUpdatedDisplay + '</div><div class="col-narrow" data-label="Status">' + freshnessDot(rs.appraisalsMeetings.freshness) + '</div></div>' +
+      '</div></div>';
+  }
+
+  contentEl.innerHTML = html;
+}
+
+async function renderDirectorDashboard(contentEl) {
+  contentEl.innerHTML = '<p class="text-muted">Loading dashboard...</p>';
+  const data = await api('getDirectorDashboardData');
+
+  let html = '<div class="card"><h3 class="card-title">' + data.centreName + ' — Category Status</h3><div class="data-table">';
+  html += '<div class="table-header"><div class="col-text-short">Category</div><div class="col-text-short">Status</div></div>';
+  data.categoryStatusCards.forEach(function(c) {
+    html += '<div class="table-row"><div class="col-text-short" data-label="Category">' + c.category + '</div>' +
+      '<div class="col-text-short" data-label="Status"><span class="badge ' + freshnessBadgeClass(c.freshness) + '">' + freshnessDot(c.freshness) + ' ' + c.statusLabel + '</span></div></div>';
+  });
+  html += '</div></div>';
+
+  const cs = data.certificatesSummary;
+  html += '<div class="card"><h3 class="card-title">Compliance Certificates</h3><div class="flex-gap">' +
+    '<span class="badge badge-red">🔴 Overdue: ' + cs.overdue + '</span>' +
+    '<span class="badge badge-yellow">🟡 Due Soon: ' + cs.dueSoon + '</span>' +
+    '<span class="badge badge-green">🟢 OK: ' + cs.ok + '</span></div></div>';
+
+  const oi = data.openItems;
+  html += '<div class="card"><h3 class="card-title">Open Items</h3><div class="flex-gap">' +
+    '<span class="badge badge-blue">Discussion Points: ' + oi.discussionOpen + ' Open, ' + oi.discussionWip + ' WIP</span>' +
+    '<span class="badge badge-blue">Feedback: ' + oi.feedbackOpen + ' Open</span></div></div>';
+
+  contentEl.innerHTML = html;
+}
+</script>
