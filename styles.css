@@ -68,6 +68,14 @@ body {
 .app-logo { font-weight: 700; font-size: 1.2rem; margin-right: 0.5rem; letter-spacing: -0.01em; }
 .app-subtitle { font-size: 0.85rem; opacity: 0.85; }
 
+.top-bar { flex-wrap: wrap; row-gap: 0.5rem; }
+.top-bar-left { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.brand-block { display: flex; flex-direction: column; line-height: 1.15; }
+.top-bar-legend { display: flex; gap: 0.9rem; flex-wrap: wrap; align-items: center; padding-left: 1rem; border-left: 1px solid rgba(255,255,255,0.25); }
+.top-bar-legend .legend-item { display: flex; align-items: center; gap: 0.35rem; font-size: 0.72rem; color: rgba(255,255,255,0.85); white-space: nowrap; }
+.top-bar-legend .legend-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+@media (max-width: 899px) { .top-bar-legend { display: none; } }
+
 .top-bar-right { display: flex; align-items: center; gap: 0.75rem; }
 .user-display { font-size: 0.9rem; opacity: 0.9; margin-right: 0.5rem; }
 
@@ -110,39 +118,27 @@ body {
    NAV LIST — colour-coded by page type
    ============================================================ */
 
-.nav-list { list-style: none; margin: 0; padding: 0; }
+.nav-list { list-style: none; margin: 0; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; }
 
 .nav-item {
-  position: relative;
   display: flex; align-items: center;
-  padding: 0.65rem 1.25rem;
+  padding: 0.65rem 1rem;
+  border-radius: 8px;
   cursor: pointer;
-  font-weight: 500;
-  color: var(--text-muted);
-  transition: background 0.15s ease, color 0.15s ease, padding-left 0.15s ease;
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: #fff;
+  opacity: 0.85;
+  transition: opacity 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
 }
-.nav-item::before {
-  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: transparent;
-}
-.nav-item:hover { padding-left: 1.5rem; background: var(--bg); }
-.nav-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 0.6rem; flex-shrink: 0; }
+.nav-item:hover { opacity: 1; transform: translateX(2px); }
+.nav-item.active { opacity: 1; box-shadow: inset 0 0 0 2px rgba(255,255,255,0.5), 0 3px 10px rgba(0,0,0,0.18); }
 
-.nav-item.nav-type-blue .nav-dot { background: var(--blue); }
-.nav-item.nav-type-amber .nav-dot { background: var(--amber); }
-.nav-item.nav-type-purple .nav-dot { background: var(--purple); }
-.nav-item.nav-type-wine .nav-dot { background: var(--wine); }
-.nav-item.nav-type-red .nav-dot { background: var(--red); }
-
-.nav-item.nav-type-blue.active { background: rgba(13,110,253,0.10); color: var(--blue); font-weight: 600; }
-.nav-item.nav-type-blue.active::before { background: var(--blue); }
-.nav-item.nav-type-amber.active { background: rgba(245,158,11,0.14); color: #8a5b0a; font-weight: 600; }
-.nav-item.nav-type-amber.active::before { background: var(--amber); }
-.nav-item.nav-type-purple.active { background: rgba(124,58,237,0.10); color: var(--purple); font-weight: 600; }
-.nav-item.nav-type-purple.active::before { background: var(--purple); }
-.nav-item.nav-type-wine.active { background: rgba(123,17,58,0.10); color: var(--wine); font-weight: 600; }
-.nav-item.nav-type-wine.active::before { background: var(--wine); }
-.nav-item.nav-type-red.active { background: rgba(220,53,69,0.10); color: var(--red); font-weight: 600; }
-.nav-item.nav-type-red.active::before { background: var(--red); }
+.nav-type-blue   { background: var(--blue); }
+.nav-type-amber  { background: var(--amber); color: #3a2a04; }
+.nav-type-purple { background: var(--purple); }
+.nav-type-wine   { background: var(--wine); }
+.nav-type-red    { background: var(--red); }
 
 .content-area { flex: 1; padding: 1.5rem; max-width: 100%; overflow-x: hidden; }
 
@@ -385,3 +381,20 @@ h2, h3 { letter-spacing: -0.01em; }
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-thumb { background: #C7D1CF; border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: #A9B6B3; }
+/* ============================================================
+   COMPLIANCE CERTIFICATES — card layout with 6 visible chips
+   ============================================================ */
+
+.cert-card { border-left: 4px solid var(--border); }
+.cert-meta-row { display: flex; gap: 1.5rem; flex-wrap: wrap; font-size: 0.88rem; margin-bottom: 0.75rem; }
+.cert-history-label { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.4rem; }
+.cert-chip-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.cert-chip {
+  display: inline-flex; align-items: center; gap: 0.25rem;
+  padding: 0.3rem 0.6rem; border-radius: 999px; font-size: 0.8rem;
+  text-decoration: none; white-space: nowrap;
+}
+.cert-chip-filled { background: #e5f0ff; color: var(--blue); font-weight: 500; }
+.cert-chip-filled:hover { background: #d3e6ff; }
+.cert-chip-empty { background: var(--bg); color: var(--text-muted); }
+.cert-footer-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; padding-top: 0.75rem; border-top: 1px solid var(--border); }

@@ -16,8 +16,17 @@
     <header id="top-bar" class="top-bar hidden">
       <div class="top-bar-left">
         <button id="mobile-nav-toggle" class="mobile-nav-toggle">☰</button>
-        <span class="app-logo">Learning Blocks</span>
-        <span class="app-subtitle">Compliance Reporting</span>
+        <div class="brand-block">
+          <span class="app-logo">First Foundation &amp; Learning Blocks</span>
+          <span class="app-subtitle">Compliance Reporting</span>
+        </div>
+        <div class="top-bar-legend">
+          <span class="legend-item"><span class="legend-dot legend-blue"></span>Auto-calculated</span>
+          <span class="legend-item"><span class="legend-dot legend-amber"></span>Needs your input</span>
+          <span class="legend-item"><span class="legend-dot legend-purple"></span>Management</span>
+          <span class="legend-item"><span class="legend-dot legend-wine"></span>Admin only</span>
+          <span class="legend-item"><span class="legend-dot legend-red"></span>Provider only</span>
+        </div>
       </div>
       <div class="top-bar-right">
         <span id="user-display" class="user-display"></span>
@@ -30,13 +39,6 @@
 
       <!-- SIDE NAV: populated dynamically by app.js based on role -->
       <nav id="side-nav" class="side-nav hidden">
-        <div class="nav-legend">
-          <div class="legend-item"><span class="legend-dot legend-blue"></span> Auto-calculated</div>
-          <div class="legend-item"><span class="legend-dot legend-amber"></span> Needs your input</div>
-          <div class="legend-item"><span class="legend-dot legend-purple"></span> Management</div>
-          <div class="legend-item"><span class="legend-dot legend-wine"></span> Admin only</div>
-          <div class="legend-item"><span class="legend-dot legend-red"></span> Provider only</div>
-        </div>
         <ul id="nav-list" class="nav-list"></ul>
       </nav>
 

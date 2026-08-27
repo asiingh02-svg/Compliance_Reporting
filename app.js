@@ -98,7 +98,7 @@ function renderNav() {
     const li = document.createElement('li');
     li.className = 'nav-item nav-type-' + item.type;
     li.dataset.view = item.key;
-    li.innerHTML = '<span class="nav-dot"></span>' + item.label;
+    li.textContent = item.label;
     li.addEventListener('click', function() { loadView(item.key); });
     navList.appendChild(li);
   });
@@ -170,9 +170,12 @@ async function openExportModal() {
   let centreOptionsHtml = '<option value="All">All Centres</option>' +
     centres.map(function(c) { return '<option value="' + c.centreId + '">' + c.centreName + '</option>'; }).join('');
 
+  let tabOptionsHtml = '<option value="__ALL__">📦 All Tabs (ZIP of CSVs)</option>' +
+    tabs.map(function(t) { return '<option value="' + t + '">' + t + '</option>'; }).join('');
+
   showModal(
     '<h3 class="card-title">Export Data</h3>' +
-    '<div class="form-group"><label>Tab</label><select id="exp-tab">' + tabs.map(function(t) { return '<option>' + t + '</option>'; }).join('') + '</select></div>' +
+    '<div class="form-group"><label>Tab</label><select id="exp-tab">' + tabOptionsHtml + '</select></div>' +
     (isAdmin ? '<div class="form-group"><label>Centre</label><select id="exp-centre">' + centreOptionsHtml + '</select></div>' : '') +
     '<div class="form-group"><label>Your Password (required to export)</label><input type="password" id="exp-password"></div>' +
     '<div class="flex-gap" style="justify-content:flex-end;"><button class="btn btn-secondary" id="exp-cancel">Cancel</button><button class="btn btn-primary" id="exp-confirm">Export</button></div>'
@@ -185,7 +188,14 @@ async function openExportModal() {
     const password = document.getElementById('exp-password').value;
     if (!password) { showToast('Password required.', 'error'); return; }
     closeModal();
-    const result = await api('generateExportCsv', password, tabName, centreScope, null, null);
+    showToast('Preparing export...', 'info');
+
+    let result;
+    if (tabName === '__ALL__') {
+      result = await api('generateExportAllCsv', password, centreScope, null, null);
+    } else {
+      result = await api('generateExportCsv', password, tabName, centreScope, null, null);
+    }
     downloadBase64File(result.filename, result.mimeType, result.base64Data);
     showToast('Export downloaded.', 'success');
   });
@@ -304,8 +314,9 @@ function dateForInput(value) {
  */
 function renderHeaderCell(colClass, label, sheetName, logicalField) {
   const session = Session.get();
-  const isAdmin = session && (session.role === 'Area Manager' || session.role === 'Approved Provider');
-  if (!isAdmin || !sheetName || !logicalField) {
+  // Extended per updated rule: all logged-in roles (Director, AM, AP)
+  // can rename headers now — previously AM/AP-only.
+  if (!session || !sheetName || !logicalField) {
     return '<div class="' + colClass + '">' + label + '</div>';
   }
   return '<div class="' + colClass + '">' + label +
