@@ -6,21 +6,21 @@
 // Maps nav item keys to their view file + display label + which
 // roles are allowed to see them in the nav.
 const NAV_CONFIG = [
-  { key: 'dashboard',        label: 'Dashboard',                roles: ['Director','Area Manager','Approved Provider'] },
-  { key: 'new-report',       label: 'New / Saved Report',       roles: ['Director','Area Manager','Approved Provider'] },
-  { key: 'owna-review',      label: 'OWNA Review',              roles: ['Director','Area Manager','Approved Provider'] },
-  { key: 'additional-checks',label: 'Additional Checks',        roles: ['Director','Area Manager','Approved Provider'] },
-  { key: 'monthly-programming',label: 'Monthly Programming',    roles: ['Director','Area Manager','Approved Provider'] },
-  { key: 'compliance-certificates',label: 'Compliance Certificates', roles: ['Director','Area Manager','Approved Provider'] },
-  { key: 'sawd-qip',         label: 'SAWD QIP',                 roles: ['Director','Area Manager','Approved Provider'] },
-  { key: 'displays',         label: 'Displays',                 roles: ['Director','Area Manager','Approved Provider'] },
-  { key: 'social-media-consent', label: 'Social Media Consent', roles: ['Director','Area Manager','Approved Provider'] },
-  { key: 'supplied-devices', label: 'Supplied Devices',         roles: ['Director','Area Manager','Approved Provider'] },
-  { key: 'appraisals',       label: 'Appraisals & Meetings',    roles: ['Director','Area Manager','Approved Provider'] },
-  { key: 'discussion-points',label: 'Discussion Points',        roles: ['Director','Area Manager','Approved Provider'] },
-  { key: 'feedback-thread',  label: 'AP/AM Feedback',           roles: ['Director','Area Manager','Approved Provider'] },
-  { key: 'admin',            label: 'Admin',                    roles: ['Area Manager','Approved Provider'] },
-  { key: 'provider-settings',label: 'Provider Settings',        roles: ['Approved Provider'] }
+  { key: 'dashboard',        label: 'Dashboard',                roles: ['Director','Area Manager','Approved Provider'], type: 'blue' },
+  { key: 'new-report',       label: 'New / Saved Report',       roles: ['Director','Area Manager','Approved Provider'], type: 'blue' },
+  { key: 'owna-review',      label: 'OWNA Review',              roles: ['Director','Area Manager','Approved Provider'], type: 'amber' },
+  { key: 'additional-checks',label: 'Additional Checks',        roles: ['Director','Area Manager','Approved Provider'], type: 'amber' },
+  { key: 'monthly-programming',label: 'Monthly Programming',    roles: ['Director','Area Manager','Approved Provider'], type: 'amber' },
+  { key: 'compliance-certificates',label: 'Compliance Certificates', roles: ['Director','Area Manager','Approved Provider'], type: 'amber' },
+  { key: 'sawd-qip',         label: 'SAWD QIP',                 roles: ['Director','Area Manager','Approved Provider'], type: 'amber' },
+  { key: 'displays',         label: 'Displays',                 roles: ['Director','Area Manager','Approved Provider'], type: 'amber' },
+  { key: 'social-media-consent', label: 'Social Media Consent', roles: ['Director','Area Manager','Approved Provider'], type: 'amber' },
+  { key: 'supplied-devices', label: 'Supplied Devices',         roles: ['Director','Area Manager','Approved Provider'], type: 'amber' },
+  { key: 'appraisals',       label: 'Appraisals & Meetings',    roles: ['Director','Area Manager','Approved Provider'], type: 'amber' },
+  { key: 'discussion-points',label: 'Discussion Points',        roles: ['Director','Area Manager','Approved Provider'], type: 'amber' },
+  { key: 'feedback-thread',  label: 'AP/AM Feedback',           roles: ['Director','Area Manager','Approved Provider'], type: 'amber' },
+  { key: 'admin',            label: 'Admin',                    roles: ['Area Manager','Approved Provider'], type: 'wine' },
+  { key: 'provider-settings',label: 'Provider Settings',        roles: ['Approved Provider'], type: 'red' }
 ];
 
 let currentView = null;
@@ -96,9 +96,9 @@ function renderNav() {
   NAV_CONFIG.forEach(function(item) {
     if (item.roles.indexOf(session.role) === -1) return;
     const li = document.createElement('li');
-    li.className = 'nav-item';
+    li.className = 'nav-item nav-type-' + item.type;
     li.dataset.view = item.key;
-    li.textContent = item.label;
+    li.innerHTML = '<span class="nav-dot"></span>' + item.label;
     li.addEventListener('click', function() { loadView(item.key); });
     navList.appendChild(li);
   });
