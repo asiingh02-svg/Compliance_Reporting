@@ -55,41 +55,70 @@ function certStatusBadge(status) {
   return map[status] || map.unknown;
 }
 
+function chipHtml(dateVal, linkVal) {
+  if (!dateVal) return '<span class="cert-chip cert-chip-empty">➕ empty</span>';
+  const dateText = formatDateAU(dateVal);
+  if (linkVal) {
+    return '<a href="' + linkVal + '" target="_blank" class="cert-chip cert-chip-filled">📅 ' + dateText + ' 🔗</a>';
+  }
+  return '<span class="cert-chip cert-chip-filled">📅 ' + dateText + '</span>';
+}
+
 async function renderCertificates(centreId) {
   const contentEl = document.getElementById('cert-content');
   contentEl.innerHTML = '<p class="text-muted">Loading...</p>';
   const statusFilter = document.getElementById('cert-status-filter').value;
   const period = await getCurrentPeriodClient();
-  const items = await api('getCertificatesData', centreId, statusFilter, 'All');
+
+  const [items, headerInfo] = await Promise.all([
+    api('getCertificatesData', centreId, statusFilter, 'All'),
+    api('getTabHeaderInfo', 'Compliance Certificates', centreId, period.periodKey)
+  ]);
 
   const session = Session.get();
-  const isAdmin = session.role === 'Area Manager' || session.role === 'Approved Provider';
-  const canEdit = isAdmin || (session.role === 'Director' && session.centreId === centreId);
+  const isAP = session.role === 'Approved Provider';
+  const isAM = session.role === 'Area Manager';
+  const isOwnDirector = session.role === 'Director' && session.centreId === centreId;
 
-    let html = '<div class="data-table"><div class="table-header">' +
-    renderHeaderCell('col-text-short', 'Item', 'Compliance Certificates', 'ItemName') +
-    renderHeaderCell('col-narrow', 'Frequency', 'Compliance Certificates', 'Frequency') +
-    renderHeaderCell('col-date', 'Next Due', 'Compliance Certificates', 'NextDue') +
-    '<div class="col-narrow">Status</div>' +
-    renderHeaderCell('col-narrow', 'Reviewed', 'Compliance Certificates', 'LastReviewedPeriod') +
-    '<div class="col-narrow">Action</div></div>';
+  // Per governance rule: AP can always edit, even when approved/locked.
+  // Director/AM are blocked once the tab is approved for this period.
+  const canEdit = isAP || (!headerInfo.isReadOnly && (isAM || isOwnDirector));
 
+  if (items.length === 0) {
+    contentEl.innerHTML = '<p class="text-muted">No items match this filter.</p>';
+    return;
+  }
+
+  let html = '';
   items.forEach(function(item) {
-    html += '<div class="table-row">';
-    html += '<div class="col-text-short" data-label="Item"><strong>' + item.itemName + '</strong>' +
-      (item.vendorContact ? '<br><span class="text-muted">' + item.vendorContact + '</span>' : '') +
-      ' <a href="#" class="view-history-link" data-item="' + encodeURIComponent(item.itemName) + '" style="font-size:0.8rem;">View history</a></div>';
-    html += '<div class="col-narrow" data-label="Frequency">' + item.frequency + '</div>';
-    html += '<div class="col-date" data-label="Next Due">' + item.nextDueDisplay + '</div>';
-    html += '<div class="col-narrow" data-label="Status">' + certStatusBadge(item.status) + '</div>';
     const reviewed = item.lastReviewedPeriod === period.periodKey;
-    html += '<div class="col-narrow" data-label="Reviewed">' +
-      '<input type="checkbox" class="cert-reviewed-checkbox" data-row="' + item.rowIndex + '" ' + (reviewed ? 'checked' : '') + ' ' + (!canEdit ? 'disabled' : '') + '></div>';
-    html += '<div class="col-narrow" data-label="Action">' +
-      (canEdit && item.frequency !== 'Static' ? '<button class="btn btn-secondary btn-small mark-completed-btn" data-row="' + item.rowIndex + '">Mark Completed</button>' : '—') + '</div>';
+    html += '<div class="card cert-card">';
+    html += '<div class="flex-between" style="align-items:flex-start;">';
+    html += '<div><strong style="font-size:1.02rem;">' + item.itemName + '</strong>' +
+      (canEdit ? ' <span class="header-edit-btn cert-edit-btn" data-row="' + item.rowIndex + '" title="Edit item details">✏️</span>' : '') + '</div>';
+    html += certStatusBadge(item.status);
+    html += '</div>';
+    html += '<div class="text-muted" style="margin:0.2rem 0 0.75rem 0;">' + (item.vendorContact || 'No vendor/contact on file') + '</div>';
+
+    html += '<div class="cert-meta-row">' +
+      '<span><span class="text-muted">Frequency:</span> <strong>' + item.frequency + '</strong></span>' +
+      '<span><span class="text-muted">Next Due:</span> <strong>' + item.nextDueDisplay + '</strong></span>' +
+      '</div>';
+
+    html += '<div class="cert-history-label">Completion History</div>';
+    html += '<div class="cert-chip-row">';
+    for (let s = 0; s < 6; s++) html += chipHtml(item.dates[s], item.links[s]);
+    html += '</div>';
+
+    html += '<div class="cert-footer-row mt-1">';
+    html += '<label class="flex-gap" style="font-size:0.85rem;">' +
+      '<input type="checkbox" class="cert-reviewed-checkbox" data-row="' + item.rowIndex + '" ' + (reviewed ? 'checked' : '') + ' ' + (!canEdit ? 'disabled' : '') + '> Reviewed this month</label>';
+    if (canEdit && item.frequency !== 'Static') {
+      html += '<button class="btn btn-secondary btn-small mark-completed-btn" data-row="' + item.rowIndex + '">Update</button>';
+    }
+    html += '</div>';
     html += '</div>';
   });
-  html += '</div>';
   contentEl.innerHTML = html;
 
   contentEl.querySelectorAll('.cert-reviewed-checkbox').forEach(function(cb) {
@@ -101,21 +130,21 @@ async function renderCertificates(centreId) {
 
   contentEl.querySelectorAll('.mark-completed-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
-      openMarkCompletedModal(centreId, Number(btn.dataset.row), function() { renderCertificates(centreId); });
+      openUpdateCompletionModal(centreId, Number(btn.dataset.row), function() { renderCertificates(centreId); });
     });
   });
 
-  contentEl.querySelectorAll('.view-history-link').forEach(function(link) {
-    link.addEventListener('click', function(e) {
-      e.preventDefault();
-      openCertificateHistoryModal(centreId, decodeURIComponent(link.dataset.item));
+  contentEl.querySelectorAll('.cert-edit-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      const item = items.find(function(it) { return it.rowIndex === Number(btn.dataset.row); });
+      openEditCertificateDetailsModal(centreId, item, period.periodKey, function() { renderCertificates(centreId); });
     });
   });
 }
 
-function openMarkCompletedModal(centreId, rowIndex, onDone) {
+function openUpdateCompletionModal(centreId, rowIndex, onDone) {
   showModal(
-    '<h3 class="card-title">Mark Completed</h3>' +
+    '<h3 class="card-title">Update Completion</h3>' +
     '<div class="form-group"><label>Completion Date</label><input type="date" id="mc-date"></div>' +
     '<div class="form-group"><label>Link (Drive/Document URL)</label><input type="text" id="mc-link" placeholder="https://..."></div>' +
     '<div class="flex-gap" style="justify-content:flex-end;">' +
@@ -135,27 +164,31 @@ function openMarkCompletedModal(centreId, rowIndex, onDone) {
   });
 }
 
-async function openCertificateHistoryModal(centreId, itemName) {
-  showModal('<p class="text-muted">Loading history...</p>');
-  const result = await api('getFullCertificateHistory', centreId, itemName);
-  let html = '<h3 class="card-title">' + itemName + ' — Full History</h3>';
-  if (result.current) {
-    html += '<p class="text-muted">Currently visible completions:</p><ul>';
-    result.current.dates.forEach(function(d, i) {
-      if (d) html += '<li>' + formatDateAU(d) + (result.current.links[i] ? ' — <a href="' + result.current.links[i] + '" target="_blank">Link</a>' : '') + '</li>';
-    });
-    html += '</ul>';
-  }
-  if (result.archived.length > 0) {
-    html += '<p class="text-muted">Archived (older) completions:</p><ul>';
-    result.archived.forEach(function(a) {
-      html += '<li>' + formatDateAU(a.date) + (a.link ? ' — <a href="' + a.link + '" target="_blank">Link</a>' : '') + '</li>';
-    });
-    html += '</ul>';
-  }
-  html += '<button class="btn btn-secondary" id="hist-close">Close</button>';
-  showModal(html);
-  document.getElementById('hist-close').addEventListener('click', closeModal);
+function openEditCertificateDetailsModal(centreId, item, periodKey, onDone) {
+  const freqOptions = ['Monthly','Quarterly','6 Months','Yearly','2 Yearly','Static'];
+  let optionsHtml = freqOptions.map(function(f) { return '<option ' + (item.frequency === f ? 'selected' : '') + '>' + f + '</option>'; }).join('');
+
+  showModal(
+    '<h3 class="card-title">Edit Item Details</h3>' +
+    '<div class="form-group"><label>Item Name</label><input type="text" id="ed-name" value="' + item.itemName + '"></div>' +
+    '<div class="form-group"><label>Frequency</label><select id="ed-freq">' + optionsHtml + '</select></div>' +
+    '<div class="form-group"><label>Vendor/Contact</label><input type="text" id="ed-vendor" value="' + (item.vendorContact || '') + '"></div>' +
+    '<div class="flex-gap" style="justify-content:flex-end;">' +
+      '<button class="btn btn-secondary" id="ed-cancel">Cancel</button>' +
+      '<button class="btn btn-primary" id="ed-confirm">Save</button>' +
+    '</div>'
+  );
+  document.getElementById('ed-cancel').addEventListener('click', closeModal);
+  document.getElementById('ed-confirm').addEventListener('click', async function() {
+    const itemName = document.getElementById('ed-name').value.trim();
+    const frequency = document.getElementById('ed-freq').value;
+    const vendorContact = document.getElementById('ed-vendor').value;
+    if (!itemName) { showToast('Item name cannot be blank.', 'error'); return; }
+    closeModal();
+    await api('editCertificateItemDetails', centreId, item.rowIndex, periodKey, itemName, frequency, vendorContact);
+    showToast('Item updated.', 'success');
+    onDone();
+  });
 }
 
 function openAddCertificateModal(centreId, isAdmin, onAdded) {
@@ -179,7 +212,7 @@ function openAddCertificateModal(centreId, isAdmin, onAdded) {
     if (!itemName) { showToast('Please enter an item name.', 'error'); return; }
     closeModal();
     await api('addCertificateItem', { itemName: itemName, frequency: frequency, vendorContact: vendorContact, centreName: null });
-    showToast('Item added.', 'success');
+    showToast('Item added — pending AM/AP review before it appears at other centres.', 'success');
     onAdded();
   });
 }
