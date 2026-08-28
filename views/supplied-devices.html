@@ -68,7 +68,10 @@ async function renderDevices(centreId) {
   items.forEach(function(item) {
     html += '<div class="table-row">';
     html += '<div class="col-text-short" data-label="Device"><input type="text" data-row="' + item.rowIndex + '" data-field="DeviceType" value="' + item.deviceType + '">' + (item.deviceBrand ? '<br><span class="text-muted">' + item.deviceBrand + ' — ' + (item.serialNumber || '') + '</span>' : '') + '</div>';
-    html += '<div class="col-text-short" data-label="Location">' + (item.deviceLocation || '—') + '</div>';
+        html += '<div class="col-text-short" data-label="Location">' +
+      '<div class="location-display">' + (item.deviceLocation || 'Not set') + '</div>' +
+      '<button class="btn btn-secondary btn-small location-edit-btn" data-row="' + item.rowIndex + '" data-current="' + (item.deviceLocation || '').replace(/"/g, '&quot;') + '">Edit</button>' +
+      '</div>';
     html += '<div class="col-date" data-label="Declared">' + formatDateAU(item.declarationDate) + '</div>';
     html += '<div class="col-text-short" data-label="Allocated To">' + (item.allocatedTo || '—') + '</div>';
     html += '<div class="col-date" data-label="Last Review"><input type="date" data-row="' + item.rowIndex + '" data-field="LastReviewDate" value="' + dateForInput(item.lastReviewDate) + '"></div>';
@@ -77,6 +80,18 @@ async function renderDevices(centreId) {
   });
   html += '</div>';
   contentEl.innerHTML = html;
+
+  contentEl.querySelectorAll('.location-edit-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      openLocationModal(btn.dataset.row, btn.dataset.current, function(newValue) {
+        return api('saveSuppliedDeviceField', centreId, Number(btn.dataset.row), 'DeviceLocation', newValue);
+      }, function(newValue) {
+        const row = btn.closest('.table-row');
+        row.querySelector('.location-display').textContent = newValue || 'Not set';
+        btn.dataset.current = newValue;
+      });
+    });
+  });
 
   contentEl.addEventListener('change', function(e) {
     if (!e.target.dataset.field) return;

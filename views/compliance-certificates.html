@@ -99,7 +99,7 @@ async function renderCertificates(centreId) {
     html += '<div class="card cert-card">';
     html += '<div class="flex-between" style="align-items:flex-start;">';
     html += '<div><strong style="font-size:1.02rem;">' + item.itemName + '</strong>' +
-      (canEdit ? ' <span class="header-edit-btn cert-edit-btn" data-row="' + item.rowIndex + '" title="Edit item details">✏️</span>' : '') + '</div>';
+      (canEdit ? ' <span class="cert-edit-btn" data-row="' + item.rowIndex + '" title="Edit item details">✏️</span>' : '') + '</div>';
     html += certStatusBadge(item.status);
     html += '</div>';
     html += '<div class="text-muted" style="margin:0.2rem 0 0.75rem 0;">' + (item.vendorContact || 'No vendor/contact on file') + '</div>';
