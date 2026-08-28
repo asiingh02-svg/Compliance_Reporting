@@ -32,7 +32,22 @@ async function rawApiCall(action, params) {
  * Usage: await api('getChecklistData', category, centreId, periodKey)
  * — token is automatically included, you never pass it yourself.
  */
+// Any action starting with one of these prefixes performs a WRITE.
+// If offline, we block it immediately with a clear message instead
+// of letting the user believe it saved (or waiting on a doomed
+// network request that fails anyway).
+const WRITE_ACTION_PREFIXES = ['save','add','update','delete','deactivate','reset','create','approve','sendBack','review','rename','mark','set','edit','request'];
+
+function isWriteAction(action) {
+  return WRITE_ACTION_PREFIXES.some(function(p) { return action.indexOf(p) === 0; });
+}
+
 async function api(action, ...args) {
+  if (!navigator.onLine && isWriteAction(action)) {
+    showToast('You are offline — this action was NOT saved. Please reconnect and try again.', 'error');
+    throw new Error('OFFLINE_BLOCKED');
+  }
+
   let params = args;
   if (NO_TOKEN_ACTIONS.indexOf(action) === -1) {
     params = [Session.getToken(), ...args];

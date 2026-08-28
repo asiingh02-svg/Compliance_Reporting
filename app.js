@@ -1,3 +1,28 @@
+/**
+ * Online/offline detection — shows a live status badge, and blocks
+ * any save action while offline so users never lose unsaved work
+ * believing it was saved. Per locked rule: viewing is allowed
+ * offline (whatever already loaded stays visible); saving is not.
+ */
+function initConnectionMonitor() {
+  const badge = document.getElementById('connection-status');
+  function updateBadge() {
+    if (navigator.onLine) {
+      badge.className = 'connection-badge connection-online';
+      badge.innerHTML = '<span class="connection-dot"></span>Online';
+    } else {
+      badge.className = 'connection-badge connection-offline';
+      badge.innerHTML = '<span class="connection-dot"></span>Offline';
+    }
+  }
+  updateBadge();
+  window.addEventListener('online', function() { updateBadge(); showToast('Back online — your data can now be saved.', 'success'); });
+  window.addEventListener('offline', function() { updateBadge(); showToast('You are offline. Changes will NOT be saved until connection returns.', 'error'); });
+}
+
+function isAppOnline() {
+  return navigator.onLine;
+}
 /* ============================================================
    APP.JS — the "photo swapper." Handles navigation, login state,
    and swapping content into the #view-container "picture frame."
@@ -114,6 +139,7 @@ function showAppShell() {
   const session = Session.get();
   document.getElementById('user-display').textContent = session.username + ' (' + session.role + ')';
   renderNav();
+  initConnectionMonitor();
 }
 
 function hideAppShell() {
@@ -312,6 +338,19 @@ function dateForInput(value) {
  * sheetName must match _Config_ColumnMap's SheetName column exactly.
  * Pass sheetName/logicalField as null to render a plain, non-editable header.
  */
+/**
+ * Fetches the CURRENT (possibly renamed) label for every field on a
+ * sheet, once per view load — fixes the bug where renamed headers
+ * reverted after refresh because views used hardcoded literal text
+ * instead of ever asking the backend for the live label.
+ */
+async function getLabelMap(sheetName) {
+  const columns = await api('getAllColumnsForSheet', sheetName);
+  const map = {};
+  columns.forEach(function(c) { map[c.logicalField] = c.displayLabel; });
+  return map;
+}
+
 function renderHeaderCell(colClass, label, sheetName, logicalField) {
   const session = Session.get();
   // Extended per updated rule: all logged-in roles (Director, AM, AP)
@@ -344,6 +383,10 @@ function openRenameHeaderModal(sheetName, logicalField, currentLabel) {
 async function handleFieldSave(e, category, centreId) {
   const el = e.target;
   if (!el.dataset || !el.dataset.field) return;
+  if (!isAppOnline()) {
+    showToast('You are offline — this change was NOT saved. Please reconnect and try again.', 'error');
+    return;
+  }
   const rowIndex = Number(el.dataset.row);
   const fieldName = el.dataset.field;
   const value = el.value;
@@ -352,6 +395,7 @@ async function handleFieldSave(e, category, centreId) {
     el.style.transition = 'background-color 0.3s';
     el.style.backgroundColor = '#E8F5EC';
     setTimeout(function() { el.style.backgroundColor = ''; }, 600);
+    if (fieldName === 'ManagerNotes') el.classList.toggle('manager-notes-empty', !value.trim());
   } catch (err) { /* api() already shows an error toast */ }
 }
 
@@ -396,6 +440,7 @@ function renderTabHeaderInfo(headerEl, headerInfo, category, centreId, periodKey
     html += '<button class="btn btn-secondary btn-small" id="sendback-tab-btn">↩ Send Back</button>';
   }
   html += '</div></div>';
+  html += '<p class="text-muted mt-1" style="margin-bottom:0; font-size:0.85rem;">💾 Your answers save automatically as soon as you type or select a value — there is no separate Save button. Once every item for this month is complete, go to <strong>New / Saved Report</strong> to Submit this tab for approval.</p>';
   headerEl.innerHTML = html;
 
   if (!headerInfo.isReadOnly) {
@@ -431,41 +476,108 @@ function renderTabHeaderInfo(headerEl, headerInfo, category, centreId, periodKey
   }
 }
 
-function renderChecklistTable(category, data, contentEl, centreId, isReadOnly) {
+function managerNotesHtml(rowIndex, value, disabled) {
+  const isEmpty = !value || !value.toString().trim();
+  return '<textarea class="' + (isEmpty ? 'manager-notes-empty' : '') + '" data-row="' + rowIndex + '" data-field="ManagerNotes" rows="2" ' + (disabled ? 'disabled' : '') + '>' + (value || '') + '</textarea>';
+}
+
+const LOCATION_OPTIONS = ['Foyer','Kitchen','OWNA','Learning Spaces','Staffroom','Programming Room',"All adult sinks","Children's sinks","Children's Toilets","Nappy Change areas","Bottle Prep Area","All chemical locations","Next to all phones","All exits signs","Evacuation Point","0-2 Room","2-3 room","3-4 room","3-5 room"];
+
+function openLocationModal(rowIndex, currentValueRaw, category, centreId, onSaved) {
+  const currentValues = currentValueRaw ? currentValueRaw.split(',').map(function(s) { return s.trim(); }) : [];
+  const knownSelected = currentValues.filter(function(v) { return LOCATION_OPTIONS.indexOf(v) !== -1; });
+  const otherValues = currentValues.filter(function(v) { return LOCATION_OPTIONS.indexOf(v) === -1 && v; });
+  const otherText = otherValues.join(', ');
+
+  const checkboxesHtml = LOCATION_OPTIONS.map(function(loc) {
+    const checked = knownSelected.indexOf(loc) !== -1 ? 'checked' : '';
+    return '<label class="flex-gap" style="font-weight:400; margin-bottom:0.4rem;"><input type="checkbox" class="loc-checkbox" value="' + loc + '" ' + checked + '> ' + loc + '</label>';
+  }).join('');
+
+  showModal(
+    '<h3 class="card-title">Select Locations</h3>' +
+    '<p class="text-muted">Choose all locations that apply.</p>' +
+    '<div style="max-height:280px; overflow-y:auto; margin-bottom:0.75rem;">' + checkboxesHtml +
+      '<label class="flex-gap" style="font-weight:400;"><input type="checkbox" id="loc-others-check" ' + (otherValues.length > 0 ? 'checked' : '') + '> Others</label>' +
+    '</div>' +
+    '<div class="form-group" id="loc-others-group" style="' + (otherValues.length > 0 ? '' : 'display:none;') + '">' +
+      '<label>Please specify</label><input type="text" id="loc-others-text" value="' + otherText.replace(/"/g, '&quot;') + '">' +
+    '</div>' +
+    '<div class="flex-gap" style="justify-content:flex-end;">' +
+      '<button class="btn btn-secondary" id="loc-cancel">Cancel</button>' +
+      '<button class="btn btn-primary" id="loc-confirm">Save</button>' +
+    '</div>'
+  );
+
+  document.getElementById('loc-others-check').addEventListener('change', function(e) {
+    document.getElementById('loc-others-group').style.display = e.target.checked ? '' : 'none';
+  });
+  document.getElementById('loc-cancel').addEventListener('click', closeModal);
+  document.getElementById('loc-confirm').addEventListener('click', async function() {
+    const selected = Array.prototype.slice.call(document.querySelectorAll('.loc-checkbox:checked')).map(function(cb) { return cb.value; });
+    if (document.getElementById('loc-others-check').checked) {
+      const othersText = document.getElementById('loc-others-text').value.trim();
+      if (othersText) selected.push(othersText);
+    }
+    const finalValue = selected.join(', ');
+    if (!isAppOnline()) { showToast('You are offline — this change was NOT saved.', 'error'); return; }
+    closeModal();
+    await api('saveChecklistField', category, centreId, Number(rowIndex), 'Location', finalValue);
+    showToast('Locations updated.', 'success');
+    onSaved(finalValue);
+  });
+}
+
+function renderChecklistTable(category, data, contentEl, centreId, isReadOnly, labelMap) {
   const session = Session.get();
   const isAdmin = session.role === 'Area Manager' || session.role === 'Approved Provider';
   const canEditDir = !isReadOnly && ((session.role === 'Director' && session.centreId === centreId) || isAdmin);
   const canEditAdmin = !isReadOnly && isAdmin;
   const schema = data.schema;
-  const adminLabel = schema.adminCheckField === 'ManagerCheck' ? 'Manager Check' : 'Compliance Check';
+  const adminLabel = lbl(labelMap, schema.adminCheckField, schema.adminCheckField === 'ManagerCheck' ? 'Manager Check' : 'Compliance Check');
 
-  let html = '<div class="data-table"><div class="table-header">' + renderHeaderCell('col-text-short', 'Item', category, 'ItemName');
-  if (schema.hasLocationColumn) html += renderHeaderCell('col-text-short', 'Location', category, 'Location');
-  html += renderHeaderCell('col-narrow', 'Self-Assess', category, 'DirSelfAssess');
-  if (schema.mitigationField) html += renderHeaderCell('col-text-long', 'Mitigation', category, schema.mitigationField);
+  let html = '<div class="data-table"><div class="table-header">' + renderHeaderCell('col-text-short', lbl(labelMap, 'ItemName', 'Item'), category, 'ItemName');
+  if (schema.hasLocationColumn) html += renderHeaderCell('col-text-short', lbl(labelMap, 'Location', 'Location'), category, 'Location');
+  html += renderHeaderCell('col-narrow', lbl(labelMap, 'DirSelfAssess', 'Self-Assess'), category, 'DirSelfAssess');
+  if (schema.mitigationField) html += renderHeaderCell('col-text-long', lbl(labelMap, schema.mitigationField, 'Mitigation'), category, schema.mitigationField);
   html += renderHeaderCell('col-narrow', adminLabel, category, schema.adminCheckField);
-  if (category === 'Monthly Programming') html += renderHeaderCell('col-date', 'Target Date', category, 'TargetCompletionDate');
-  html += renderHeaderCell('col-text-long', 'Manager Notes', category, 'ManagerNotes') + renderHeaderCell('col-text-long', 'Director Notes', category, 'DirectorNotes') + '</div>';
+  if (category === 'Monthly Programming') html += renderHeaderCell('col-date', lbl(labelMap, 'TargetCompletionDate', 'Target Date'), category, 'TargetCompletionDate');
+  html += renderHeaderCell('col-text-long', lbl(labelMap, 'ManagerNotes', 'Manager Notes'), category, 'ManagerNotes') + renderHeaderCell('col-text-long', lbl(labelMap, 'DirectorNotes', 'Director Notes'), category, 'DirectorNotes') + '</div>';
 
   data.items.forEach(function(item) {
     html += '<div class="table-row">';
-    html += '<div class="col-text-short" data-label="Item">' + item.itemName +
+    html += '<div class="col-text-short" data-label="Item"><textarea class="item-name-input" data-row="' + item.rowIndex + '" data-field="ItemName" rows="2" ' + (!canEditDir ? 'disabled' : '') + '>' + item.itemName + '</textarea>' +
       (item.rowOrigin === 'DirectorAdded' ? ' <span class="badge badge-blue">🆕</span>' : '') +
       (item.isQAOfTheMonth ? ' <span class="badge badge-yellow">This Month</span>' : '') +
       (!item.scheduledThisMonth ? ' <span class="badge badge-grey">Not due this month</span>' : '') + '</div>';
-    if (schema.hasLocationColumn) html += '<div class="col-text-short" data-label="Location">' + (item.location || '—') + '</div>';
+    if (schema.hasLocationColumn) {
+      html += '<div class="col-text-short" data-label="Location">' +
+        '<div class="location-display">' + (item.location || 'Not set') + '</div>' +
+        (canEditDir ? '<button class="btn btn-secondary btn-small location-edit-btn" data-row="' + item.rowIndex + '" data-current="' + (item.location || '').replace(/"/g, '&quot;') + '">Edit</button>' : '') +
+        '</div>';
+    }
     html += '<div class="col-narrow" data-label="Self-Assess">' + ynSelectHtml(item.rowIndex, 'DirSelfAssess', item.dirSelfAssess, !canEditDir) + '</div>';
     if (schema.mitigationField) html += '<div class="col-text-long" data-label="Mitigation">' + textareaHtml(item.rowIndex, schema.mitigationField, item.dirMitigation, !canEditDir) + '</div>';
     html += '<div class="col-narrow" data-label="' + adminLabel + '">' + ynSelectHtml(item.rowIndex, schema.adminCheckField, item.adminCheck, !canEditAdmin) + '</div>';
     if (category === 'Monthly Programming') {
-      html += '<div class="col-date" data-label="Target Date"><input type="date" data-row="' + item.rowIndex + '" data-field="TargetCompletionDate" value="' + dateForInput(item.targetCompletionDate) + '" ' + (!canEditAdmin ? 'disabled' : '') + '></div>';
+      html += '<div class="col-date" data-label="Target Date"><input type="date" data-row="' + item.rowIndex + '" data-field="TargetCompletionDate" value="' + dateForInput(item.targetCompletionDate) + '" ' + (!canEditDir ? 'disabled' : '') + '></div>';
     }
-    html += '<div class="col-text-long" data-label="Manager Notes">' + textareaHtml(item.rowIndex, 'ManagerNotes', item.managerNotes, !canEditAdmin) + '</div>';
+    html += '<div class="col-text-long" data-label="Manager Notes">' + managerNotesHtml(item.rowIndex, item.managerNotes, !canEditAdmin) + '</div>';
     html += '<div class="col-text-long" data-label="Director Notes">' + textareaHtml(item.rowIndex, 'DirectorNotes', item.directorNotes, !canEditDir) + '</div>';
     html += '</div>';
   });
   html += '</div>';
   contentEl.innerHTML = html;
+
+  contentEl.querySelectorAll('.location-edit-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      openLocationModal(btn.dataset.row, btn.dataset.current, category, centreId, function(newValue) {
+        const row = btn.closest('.table-row');
+        row.querySelector('.location-display').textContent = newValue || 'Not set';
+        btn.dataset.current = newValue;
+      });
+    });
+  });
 
   contentEl.addEventListener('change', function(e) { handleFieldSave(e, category, centreId); });
   contentEl.addEventListener('focusout', function(e) { if (e.target.tagName === 'TEXTAREA') handleFieldSave(e, category, centreId); });
@@ -474,15 +586,20 @@ function renderChecklistTable(category, data, contentEl, centreId, isReadOnly) {
 async function renderChecklistTab(category, contentEl, headerEl, centreId) {
   contentEl.innerHTML = '<p class="text-muted">Loading...</p>';
   const period = await getCurrentPeriodClient();
-  const [data, headerInfo] = await Promise.all([
+  const [data, headerInfo, labelMap] = await Promise.all([
     api('getChecklistData', category, centreId, period.periodKey),
-    api('getTabHeaderInfo', category, centreId, period.periodKey)
+    api('getTabHeaderInfo', category, centreId, period.periodKey),
+    getLabelMap(category)
   ]);
 
   renderTabHeaderInfo(headerEl, headerInfo, category, centreId, period.periodKey, function() {
     renderChecklistTab(category, contentEl, headerEl, centreId);
   });
-  renderChecklistTable(category, data, contentEl, centreId, headerInfo.isReadOnly);
+  renderChecklistTable(category, data, contentEl, centreId, headerInfo.isReadOnly, labelMap);
+}
+
+function lbl(labelMap, field, fallback) {
+  return (labelMap && labelMap[field]) || fallback;
 }
 
 /* ============================================================
