@@ -1,5 +1,5 @@
 /* ============================================================
-   LEARNING BLOCKS COMPLIANCE — DESIGN SYSTEM
+   FIRST FOUNDATION AND LEARNING BLOCKS COMPLIANCE — DESIGN SYSTEM
    Matches exact palette/gradient/login spec provided.
    ============================================================ */
 
@@ -398,3 +398,5 @@ h2, h3 { letter-spacing: -0.01em; }
 .cert-chip-filled:hover { background: #d3e6ff; }
 .cert-chip-empty { background: var(--bg); color: var(--text-muted); }
 .cert-footer-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; padding-top: 0.75rem; border-top: 1px solid var(--border); }
+.cert-chip-editable { cursor: pointer; }
+.cert-chip-editable:hover { box-shadow: 0 0 0 2px rgba(13,110,253,0.3); }
