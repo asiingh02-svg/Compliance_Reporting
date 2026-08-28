@@ -23,22 +23,22 @@ async function initAdditionalChecks() {
   }
 }
 
-function buildAcTable(items, canEditDir, canEditAdmin) {
+function buildAcTable(items, canEditDir, canEditAdmin, labelMap) {
   if (items.length === 0) return '<p class="text-muted">No items scheduled.</p>';
-    let html = '<div class="data-table"><div class="table-header">' +
-    renderHeaderCell('col-text-short', 'Item', 'Additional Checks', 'ItemName') +
-    renderHeaderCell('col-narrow', 'Self-Assess', 'Additional Checks', 'DirSelfAssess') +
-    renderHeaderCell('col-text-long', 'Mitigation', 'Additional Checks', 'DirMitigation') +
-    renderHeaderCell('col-narrow', 'Compliance Check', 'Additional Checks', 'ComplianceCheck') +
-    renderHeaderCell('col-text-long', 'Manager Notes', 'Additional Checks', 'ManagerNotes') +
-    renderHeaderCell('col-text-long', 'Director Notes', 'Additional Checks', 'DirectorNotes') + '</div>';
+  let html = '<div class="data-table"><div class="table-header">' +
+    renderHeaderCell('col-text-short', lbl(labelMap, 'ItemName', 'Item'), 'Additional Checks', 'ItemName') +
+    renderHeaderCell('col-narrow', lbl(labelMap, 'DirSelfAssess', 'Self-Assess'), 'Additional Checks', 'DirSelfAssess') +
+    renderHeaderCell('col-text-long', lbl(labelMap, 'DirMitigation', 'Mitigation'), 'Additional Checks', 'DirMitigation') +
+    renderHeaderCell('col-narrow', lbl(labelMap, 'ComplianceCheck', 'Compliance Check'), 'Additional Checks', 'ComplianceCheck') +
+    renderHeaderCell('col-text-long', lbl(labelMap, 'ManagerNotes', 'Manager Notes'), 'Additional Checks', 'ManagerNotes') +
+    renderHeaderCell('col-text-long', lbl(labelMap, 'DirectorNotes', 'Director Notes'), 'Additional Checks', 'DirectorNotes') + '</div>';
   items.forEach(function(item) {
     html += '<div class="table-row">';
-    html += '<div class="col-text-short" data-label="Item">' + item.itemName + (item.rowOrigin === 'DirectorAdded' ? ' <span class="badge badge-blue">🆕</span>' : '') + '</div>';
+    html += '<div class="col-text-short" data-label="Item"><textarea class="item-name-input" data-row="' + item.rowIndex + '" data-field="ItemName" rows="2" ' + (!canEditDir ? 'disabled' : '') + '>' + item.itemName + '</textarea>' + (item.rowOrigin === 'DirectorAdded' ? ' <span class="badge badge-blue">🆕</span>' : '') + '</div>';
     html += '<div class="col-narrow" data-label="Self-Assess">' + ynSelectHtml(item.rowIndex, 'DirSelfAssess', item.dirSelfAssess, !canEditDir) + '</div>';
     html += '<div class="col-text-long" data-label="Mitigation">' + textareaHtml(item.rowIndex, 'DirMitigation', item.dirMitigation, !canEditDir) + '</div>';
     html += '<div class="col-narrow" data-label="Compliance Check">' + ynSelectHtml(item.rowIndex, 'ComplianceCheck', item.adminCheck, !canEditAdmin) + '</div>';
-    html += '<div class="col-text-long" data-label="Manager Notes">' + textareaHtml(item.rowIndex, 'ManagerNotes', item.managerNotes, !canEditAdmin) + '</div>';
+    html += '<div class="col-text-long" data-label="Manager Notes">' + managerNotesHtml(item.rowIndex, item.managerNotes, !canEditAdmin) + '</div>';
     html += '<div class="col-text-long" data-label="Director Notes">' + textareaHtml(item.rowIndex, 'DirectorNotes', item.directorNotes, !canEditDir) + '</div>';
     html += '</div>';
   });
@@ -52,9 +52,10 @@ async function renderAdditionalChecks(centreId) {
   contentEl.innerHTML = '<p class="text-muted">Loading...</p>';
 
   const period = await getCurrentPeriodClient();
-  const [data, headerInfo] = await Promise.all([
+  const [data, headerInfo, labelMap] = await Promise.all([
     api('getAdditionalChecksData', centreId, period.periodKey),
-    api('getTabHeaderInfo', 'Additional Checks', centreId, period.periodKey)
+    api('getTabHeaderInfo', 'Additional Checks', centreId, period.periodKey),
+    getLabelMap('Additional Checks')
   ]);
 
   renderTabHeaderInfo(headerEl, headerInfo, 'Additional Checks', centreId, period.periodKey, function() {
@@ -66,11 +67,11 @@ async function renderAdditionalChecks(centreId) {
   const canEditDir = !headerInfo.isReadOnly && ((session.role === 'Director' && session.centreId === centreId) || isAdmin);
   const canEditAdmin = !headerInfo.isReadOnly && isAdmin;
 
-  let html = '<div class="card"><h3 class="card-title">This Month</h3>' + buildAcTable(data.currentMonthItems, canEditDir, canEditAdmin) + '</div>';
+  let html = '<div class="card"><h3 class="card-title">This Month</h3>' + buildAcTable(data.currentMonthItems, canEditDir, canEditAdmin, labelMap) + '</div>';
 
   data.lookAhead.forEach(function(p) {
     html += '<details class="card"><summary style="cursor:pointer; font-weight:600;">' + p.monthName + ' (look-ahead — editable now, not due yet)</summary>' +
-      '<div class="mt-1">' + buildAcTable(p.items, canEditDir, canEditAdmin) + '</div></details>';
+      '<div class="mt-1">' + buildAcTable(p.items, canEditDir, canEditAdmin, labelMap) + '</div></details>';
   });
 
   contentEl.innerHTML = html;

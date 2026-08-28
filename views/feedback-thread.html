@@ -56,6 +56,7 @@ async function initFeedbackThread() {
 
 async function renderFeedback(centreId) {
   const contentEl = document.getElementById('ft-content');
+  contentEl.insertAdjacentHTML('beforebegin', '<p class="text-muted mt-1" style="margin-bottom:0.75rem; font-size:0.85rem;">💾 Entries save automatically. There is no Submit/Approve step — tick Resolved once a matter is closed.</p>');
   contentEl.innerHTML = '<p class="text-muted">Loading...</p>';
   const filter = document.getElementById('ft-filter').value;
   const items = await api('getFeedbackThread', centreId, filter);

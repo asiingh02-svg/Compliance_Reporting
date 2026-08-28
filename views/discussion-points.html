@@ -73,11 +73,12 @@ async function renderDiscussionPoints(centreId) {
     renderHeaderCell('col-narrow', 'Discussion Needed', 'Discussion Points', 'DiscussionNeeded') +
     renderHeaderCell('col-narrow', 'Follow-Up', 'Discussion Points', 'FollowUpRequired') +
     renderHeaderCell('col-narrow', 'Status', 'Discussion Points', 'Status') +
-    renderHeaderCell('col-text-long', 'Comments', 'Discussion Points', 'Comments') + '</div>';
+        renderHeaderCell('col-text-long', 'Comments', 'Discussion Points', 'Comments') + '</div>';
+  contentEl.insertAdjacentHTML('beforebegin', '<p class="text-muted mt-1" style="margin-bottom:0.75rem; font-size:0.85rem;">💾 Entries save automatically as you edit them. There is no Submit/Approve step — items simply move between Open, WIP, Closed and Deferred as you update Status.</p>');
 
   items.forEach(function(item) {
     html += '<div class="table-row">';
-    html += '<div class="col-text-short" data-label="Topic"><strong>' + item.topic + '</strong></div>';
+    html += '<div class="col-text-short" data-label="Topic"><textarea rows="2" data-row="' + item.rowIndex + '" data-field="Topic">' + item.topic + '</textarea></div>';
     html += '<div class="col-narrow" data-label="Discussion Needed">' + ynSelectHtml(item.rowIndex, 'DiscussionNeeded', item.discussionNeeded, false) + '</div>';
     html += '<div class="col-narrow" data-label="Follow-Up">' + ynSelectHtml(item.rowIndex, 'FollowUpRequired', item.followUpRequired, false) + '</div>';
     html += '<div class="col-narrow" data-label="Status">' + statusSelectHtml(item.rowIndex, item.status) + '</div>';

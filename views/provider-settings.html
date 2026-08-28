@@ -38,7 +38,8 @@ async function renderUsersTab(contentEl) {
     html += '<div class="col-narrow" data-label="Active">' + (u.active ? '🟢' : '🔴') + '</div>';
     html += '<div class="col-text-short" data-label="Actions"><div class="flex-gap">' +
       '<button class="btn btn-secondary btn-small u-reset" data-row="' + u.rowIndex + '">Reset Password</button>' +
-      (u.active ? '<button class="btn btn-danger btn-small u-deactivate" data-row="' + u.rowIndex + '">Deactivate</button>' : '') +
+      (u.active && u.role !== 'Approved Provider' ? '<button class="btn btn-danger btn-small u-deactivate" data-row="' + u.rowIndex + '">Deactivate</button>' : '') +
+      (u.role === 'Approved Provider' ? '<span class="text-muted" style="font-size:0.8rem;">Protected account</span>' : '') +
       '</div></div>';
     html += '</div>';
   });

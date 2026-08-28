@@ -60,11 +60,12 @@ async function renderSocialConsent(centreId) {
     renderHeaderCell('col-text-short', 'Staff Name', 'Staff Social Media Consent', 'StaffName') +
     renderHeaderCell('col-text-short', 'Role', 'Staff Social Media Consent', 'Role');
   SMC_FIELDS.forEach(function(f) { html += renderHeaderCell('col-narrow', f.label, 'Staff Social Media Consent', f.key); });
-  html += renderHeaderCell('col-text-long', 'Notes', 'Staff Social Media Consent', 'Notes') + '</div>';
+    html += renderHeaderCell('col-text-long', 'Notes', 'Staff Social Media Consent', 'Notes') + '</div>';
+  contentEl.insertAdjacentHTML('beforebegin', '<p class="text-muted mt-1" style="margin-bottom:0.75rem; font-size:0.85rem;">💾 This is an ongoing register — every change saves automatically as you edit it. There is no Submit/Approve step for this tab.</p>');
 
   items.forEach(function(item) {
-    html += '<div class="table-row"><div class="col-text-short" data-label="Staff Name"><strong>' + item.staffName + '</strong></div>';
-    html += '<div class="col-text-short" data-label="Role">' + (item.role || '—') + '</div>';
+    html += '<div class="table-row"><div class="col-text-short" data-label="Staff Name"><input type="text" data-row="' + item.rowIndex + '" data-field="StaffName" value="' + item.staffName + '"></div>';
+    html += '<div class="col-text-short" data-label="Role"><input type="text" data-row="' + item.rowIndex + '" data-field="Role" value="' + (item.role || '') + '"></div>';
     SMC_FIELDS.forEach(function(f) {
       html += '<div class="col-narrow" data-label="' + f.label + '">' + ynSelectHtml(item.rowIndex, f.key, item[f.key], false) + '</div>';
     });

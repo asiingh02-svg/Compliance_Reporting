@@ -63,12 +63,13 @@ async function renderAppraisals(centreId) {
     renderHeaderCell('col-text-long', 'Mitigation', 'Appraisals Meetings', 'DirMitigation') +
     renderHeaderCell('col-narrow', 'Manager Check', 'Appraisals Meetings', 'ManagerCheck') +
     renderHeaderCell('col-text-long', 'Manager Notes', 'Appraisals Meetings', 'ManagerNotes') +
-    renderHeaderCell('col-text-long', 'Director Notes', 'Appraisals Meetings', 'DirectorNotes') + '</div>';
+        renderHeaderCell('col-text-long', 'Director Notes', 'Appraisals Meetings', 'DirectorNotes') + '</div>';
+  contentEl.insertAdjacentHTML('beforebegin', '<p class="text-muted mt-1" style="margin-bottom:0.75rem; font-size:0.85rem;">💾 This is an ongoing register — every change saves automatically as you edit it. There is no Submit/Approve step for this tab.</p>');
 
   items.forEach(function(item) {
     html += '<div class="table-row">';
-    html += '<div class="col-text-short" data-label="Staff"><strong>' + item.staffName + '</strong></div>';
-    html += '<div class="col-text-short" data-label="Type">' + (item.appraisalType || '—') + '</div>';
+    html += '<div class="col-text-short" data-label="Staff"><input type="text" data-row="' + item.rowIndex + '" data-field="StaffName" value="' + item.staffName + '" ' + (!canEditDir ? 'disabled' : '') + '></div>';
+    html += '<div class="col-text-short" data-label="Type"><input type="text" data-row="' + item.rowIndex + '" data-field="AppraisalType" value="' + (item.appraisalType || '') + '" ' + (!canEditDir ? 'disabled' : '') + '></div>';
     html += '<div class="col-date" data-label="Date">' + formatDateAU(item.appraisalDate) + '</div>';
     html += '<div class="col-narrow" data-label="Self-Assess">' + ynSelectHtml(item.rowIndex, 'DirSelfAssess', item.dirSelfAssess, !canEditDir) + '</div>';
     html += '<div class="col-narrow" data-label="Minutes Published">' + ynSelectHtml(item.rowIndex, 'MinutesPublished', item.minutesPublished, !canEditAdmin) + '</div>';
