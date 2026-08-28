@@ -55,13 +55,17 @@ function certStatusBadge(status) {
   return map[status] || map.unknown;
 }
 
-function chipHtml(dateVal, linkVal) {
-  if (!dateVal) return '<span class="cert-chip cert-chip-empty">➕ empty</span>';
-  const dateText = formatDateAU(dateVal);
-  if (linkVal) {
-    return '<a href="' + linkVal + '" target="_blank" class="cert-chip cert-chip-filled">📅 ' + dateText + ' 🔗</a>';
+function chipHtml(dateVal, linkVal, rowIndex, slotIndex, canEdit) {
+  if (!dateVal) {
+    return canEdit
+      ? '<span class="cert-chip cert-chip-empty cert-chip-editable" data-row="' + rowIndex + '" data-slot="' + slotIndex + '" data-date="" data-link="">➕ empty</span>'
+      : '<span class="cert-chip cert-chip-empty">➕ empty</span>';
   }
-  return '<span class="cert-chip cert-chip-filled">📅 ' + dateText + '</span>';
+  const dateText = formatDateAU(dateVal);
+  const isoDate = dateForInput(dateVal);
+  const linkPart = linkVal ? ' 🔗' : '';
+  const editableClass = canEdit ? ' cert-chip-editable' : '';
+  return '<span class="cert-chip cert-chip-filled' + editableClass + '" data-row="' + rowIndex + '" data-slot="' + slotIndex + '" data-date="' + isoDate + '" data-link="' + (linkVal || '') + '">📅 ' + dateText + linkPart + '</span>';
 }
 
 async function renderCertificates(centreId) {
@@ -105,9 +109,9 @@ async function renderCertificates(centreId) {
       '<span><span class="text-muted">Next Due:</span> <strong>' + item.nextDueDisplay + '</strong></span>' +
       '</div>';
 
-    html += '<div class="cert-history-label">Completion History</div>';
+    html += '<div class="cert-history-label">Completion History <span class="text-muted" style="font-weight:400; text-transform:none;">(click a date to view link or edit)</span></div>';
     html += '<div class="cert-chip-row">';
-    for (let s = 0; s < 6; s++) html += chipHtml(item.dates[s], item.links[s]);
+    for (let s = 0; s < 6; s++) html += chipHtml(item.dates[s], item.links[s], item.rowIndex, s, canEdit);
     html += '</div>';
 
     html += '<div class="cert-footer-row mt-1">';
@@ -139,6 +143,34 @@ async function renderCertificates(centreId) {
       const item = items.find(function(it) { return it.rowIndex === Number(btn.dataset.row); });
       openEditCertificateDetailsModal(centreId, item, period.periodKey, function() { renderCertificates(centreId); });
     });
+  });
+
+  contentEl.querySelectorAll('.cert-chip-editable').forEach(function(chip) {
+    chip.addEventListener('click', function() {
+      openEditSlotModal(centreId, Number(chip.dataset.row), Number(chip.dataset.slot), chip.dataset.date, chip.dataset.link, period.periodKey, function() { renderCertificates(centreId); });
+    });
+  });
+}
+
+function openEditSlotModal(centreId, rowIndex, slotIndex, currentDate, currentLink, periodKey, onDone) {
+  showModal(
+    '<h3 class="card-title">Edit Completion Entry</h3>' +
+    '<div class="form-group"><label>Date</label><input type="date" id="es-date" value="' + currentDate + '"></div>' +
+    '<div class="form-group"><label>Link (Drive/Document URL)</label><input type="text" id="es-link" value="' + (currentLink || '') + '" placeholder="https://..."></div>' +
+    '<div class="flex-gap" style="justify-content:flex-end;">' +
+      '<button class="btn btn-secondary" id="es-cancel">Cancel</button>' +
+      '<button class="btn btn-primary" id="es-confirm">Save</button>' +
+    '</div>'
+  );
+  document.getElementById('es-cancel').addEventListener('click', closeModal);
+  document.getElementById('es-confirm').addEventListener('click', async function() {
+    const date = document.getElementById('es-date').value;
+    const link = document.getElementById('es-link').value;
+    if (!date) { showToast('Please select a date.', 'error'); return; }
+    closeModal();
+    await api('editCertificateSlot', centreId, rowIndex, periodKey, slotIndex, date, link);
+    showToast('Entry updated.', 'success');
+    onDone();
   });
 }
 
