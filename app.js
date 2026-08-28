@@ -483,7 +483,7 @@ function managerNotesHtml(rowIndex, value, disabled) {
 
 const LOCATION_OPTIONS = ['Foyer','Kitchen','OWNA','Learning Spaces','Staffroom','Programming Room',"All adult sinks","Children's sinks","Children's Toilets","Nappy Change areas","Bottle Prep Area","All chemical locations","Next to all phones","All exits signs","Evacuation Point","0-2 Room","2-3 room","3-4 room","3-5 room"];
 
-function openLocationModal(rowIndex, currentValueRaw, category, centreId, onSaved) {
+function openLocationModal(rowIndex, currentValueRaw, saveFn, onSaved) {
   const currentValues = currentValueRaw ? currentValueRaw.split(',').map(function(s) { return s.trim(); }) : [];
   const knownSelected = currentValues.filter(function(v) { return LOCATION_OPTIONS.indexOf(v) !== -1; });
   const otherValues = currentValues.filter(function(v) { return LOCATION_OPTIONS.indexOf(v) === -1 && v; });
@@ -522,7 +522,7 @@ function openLocationModal(rowIndex, currentValueRaw, category, centreId, onSave
     const finalValue = selected.join(', ');
     if (!isAppOnline()) { showToast('You are offline — this change was NOT saved.', 'error'); return; }
     closeModal();
-    await api('saveChecklistField', category, centreId, Number(rowIndex), 'Location', finalValue);
+    await saveFn(finalValue);
     showToast('Locations updated.', 'success');
     onSaved(finalValue);
   });
@@ -571,7 +571,9 @@ function renderChecklistTable(category, data, contentEl, centreId, isReadOnly, l
 
   contentEl.querySelectorAll('.location-edit-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
-      openLocationModal(btn.dataset.row, btn.dataset.current, category, centreId, function(newValue) {
+      openLocationModal(btn.dataset.row, btn.dataset.current, function(newValue) {
+        return api('saveChecklistField', category, centreId, Number(btn.dataset.row), 'Location', newValue);
+      }, function(newValue) {
         const row = btn.closest('.table-row');
         row.querySelector('.location-display').textContent = newValue || 'Not set';
         btn.dataset.current = newValue;
