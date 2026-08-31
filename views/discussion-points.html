@@ -15,6 +15,7 @@
   </select>
   <button class="btn btn-secondary btn-small" id="dp-add-btn">+ Add Topic</button>
 </div>
+<p class="text-muted mt-1" style="margin-bottom:0.75rem; font-size:0.85rem;">💾 Entries save automatically as you edit them. There is no Submit/Approve step — items simply move between Open, WIP, Closed and Deferred as you update Status.</p>
 <div id="dp-content"></div>
 
 <script>
@@ -73,8 +74,7 @@ async function renderDiscussionPoints(centreId) {
     renderHeaderCell('col-narrow', 'Discussion Needed', 'Discussion Points', 'DiscussionNeeded') +
     renderHeaderCell('col-narrow', 'Follow-Up', 'Discussion Points', 'FollowUpRequired') +
     renderHeaderCell('col-narrow', 'Status', 'Discussion Points', 'Status') +
-        renderHeaderCell('col-text-long', 'Comments', 'Discussion Points', 'Comments') + '</div>';
-  contentEl.insertAdjacentHTML('beforebegin', '<p class="text-muted mt-1" style="margin-bottom:0.75rem; font-size:0.85rem;">💾 Entries save automatically as you edit them. There is no Submit/Approve step — items simply move between Open, WIP, Closed and Deferred as you update Status.</p>');
+    renderHeaderCell('col-text-long', 'Comments', 'Discussion Points', 'Comments') + '</div>';
 
   items.forEach(function(item) {
     html += '<div class="table-row">';

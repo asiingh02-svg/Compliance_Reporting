@@ -5,6 +5,7 @@
   </div>
 </div>
 <button class="btn btn-secondary btn-small mt-1" id="smc-add-btn" style="margin-bottom:1rem;">+ Add Staff Member</button>
+<p class="text-muted mt-1" style="margin-bottom:0.75rem; font-size:0.85rem;">💾 This is an ongoing register — every change saves automatically as you edit it. There is no Submit/Approve step for this tab.</p>
 <div id="smc-content"></div>
 
 <script>
@@ -44,7 +45,7 @@ async function initSocialMediaConsent() {
       const role = document.getElementById('smc-role').value.trim();
       if (!name) { showToast('Please enter a name.', 'error'); return; }
       closeModal();
-      await api('addSocialMediaConsentRow', name, role);
+      await api('addSocialMediaConsentRow', name, role, activeCentreId);
       showToast('Staff member added.', 'success');
       renderSocialConsent(activeCentreId);
     });
@@ -60,8 +61,7 @@ async function renderSocialConsent(centreId) {
     renderHeaderCell('col-text-short', 'Staff Name', 'Staff Social Media Consent', 'StaffName') +
     renderHeaderCell('col-text-short', 'Role', 'Staff Social Media Consent', 'Role');
   SMC_FIELDS.forEach(function(f) { html += renderHeaderCell('col-narrow', f.label, 'Staff Social Media Consent', f.key); });
-    html += renderHeaderCell('col-text-long', 'Notes', 'Staff Social Media Consent', 'Notes') + '</div>';
-  contentEl.insertAdjacentHTML('beforebegin', '<p class="text-muted mt-1" style="margin-bottom:0.75rem; font-size:0.85rem;">💾 This is an ongoing register — every change saves automatically as you edit it. There is no Submit/Approve step for this tab.</p>');
+  html += renderHeaderCell('col-text-long', 'Notes', 'Staff Social Media Consent', 'Notes') + '</div>';
 
   items.forEach(function(item) {
     html += '<div class="table-row"><div class="col-text-short" data-label="Staff Name"><input type="text" data-row="' + item.rowIndex + '" data-field="StaffName" value="' + item.staffName + '"></div>';

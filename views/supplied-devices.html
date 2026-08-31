@@ -5,6 +5,7 @@
   </div>
 </div>
 <button class="btn btn-secondary btn-small mt-1" id="sd-add-btn" style="margin-bottom:1rem;">+ Add Device</button>
+<p class="text-muted mt-1" style="margin-bottom:0.75rem; font-size:0.85rem;">💾 This is an ongoing register — every change saves automatically as you edit it. There is no Submit/Approve step for this tab.</p>
 <div id="sd-content"></div>
 
 <script>
@@ -50,27 +51,25 @@ async function initSuppliedDevices() {
     });
   });
 }
-
 async function renderDevices(centreId) {
   const contentEl = document.getElementById('sd-content');
   contentEl.innerHTML = '<p class="text-muted">Loading...</p>';
   const items = await api('getSuppliedDevicesData', centreId);
 
-    let html = '<div class="data-table"><div class="table-header">' +
+  let html = '<div class="data-table"><div class="table-header">' +
     renderHeaderCell('col-text-short', 'Device', 'Supplied Devices', 'DeviceType') +
     renderHeaderCell('col-text-short', 'Location', 'Supplied Devices', 'DeviceLocation') +
     renderHeaderCell('col-date', 'Declared', 'Supplied Devices', 'DeclarationDate') +
     renderHeaderCell('col-text-short', 'Allocated To', 'Supplied Devices', 'AllocatedTo') +
     renderHeaderCell('col-date', 'Last Review', 'Supplied Devices', 'LastReviewDate') +
     renderHeaderCell('col-text-long', 'Comments', 'Supplied Devices', 'Comments') + '</div>';
-  contentEl.insertAdjacentHTML('beforebegin', '<p class="text-muted mt-1" style="margin-bottom:0.75rem; font-size:0.85rem;">💾 This is an ongoing register — every change saves automatically as you edit it. There is no Submit/Approve step for this tab.</p>');
 
   items.forEach(function(item) {
     html += '<div class="table-row">';
-    html += '<div class="col-text-short" data-label="Device"><input type="text" data-row="' + item.rowIndex + '" data-field="DeviceType" value="' + item.deviceType + '">' + (item.deviceBrand ? '<br><span class="text-muted">' + item.deviceBrand + ' — ' + (item.serialNumber || '') + '</span>' : '') + '</div>';
-        html += '<div class="col-text-short" data-label="Location">' +
+    html += '<div class="col-text-short" data-label="Device"><strong>' + item.deviceType + '</strong>' + (item.deviceBrand ? '<br><span class="text-muted">' + item.deviceBrand + ' — ' + (item.serialNumber || '') + '</span>' : '') + '</div>';
+    html += '<div class="col-text-short" data-label="Location">' +
       '<div class="location-display">' + (item.deviceLocation || 'Not set') + '</div>' +
-      '<button class="btn btn-secondary btn-small location-edit-btn" data-row="' + item.rowIndex + '" data-current="' + (item.deviceLocation || '').replace(/"/g, '&quot;') + '">Edit</button>' +
+      '<button type="button" class="btn btn-secondary btn-small location-edit-btn" data-row="' + item.rowIndex + '" data-current="' + (item.deviceLocation || '').replace(/"/g, '&quot;') + '">Edit</button>' +
       '</div>';
     html += '<div class="col-date" data-label="Declared">' + formatDateAU(item.declarationDate) + '</div>';
     html += '<div class="col-text-short" data-label="Allocated To">' + (item.allocatedTo || '—') + '</div>';

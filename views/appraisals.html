@@ -5,6 +5,7 @@
   </div>
 </div>
 <button class="btn btn-secondary btn-small mt-1" id="ap-add-btn" style="margin-bottom:1rem;">+ Add Appraisal</button>
+<p class="text-muted mt-1" style="margin-bottom:0.75rem; font-size:0.85rem;">💾 This is an ongoing register — every change saves automatically as you edit it. There is no Submit/Approve step for this tab.</p>
 <div id="ap-content"></div>
 
 <script>
@@ -38,7 +39,7 @@ async function initAppraisals() {
       const date = document.getElementById('ap-date').value;
       if (!name || !date) { showToast('Please enter a name and date.', 'error'); return; }
       closeModal();
-      await api('addAppraisalRow', name, type, date);
+      await api('addAppraisalRow', name, type, date, activeCentreId);
       showToast('Appraisal added.', 'success');
       renderAppraisals(activeCentreId);
     });
@@ -63,8 +64,7 @@ async function renderAppraisals(centreId) {
     renderHeaderCell('col-text-long', 'Mitigation', 'Appraisals Meetings', 'DirMitigation') +
     renderHeaderCell('col-narrow', 'Manager Check', 'Appraisals Meetings', 'ManagerCheck') +
     renderHeaderCell('col-text-long', 'Manager Notes', 'Appraisals Meetings', 'ManagerNotes') +
-        renderHeaderCell('col-text-long', 'Director Notes', 'Appraisals Meetings', 'DirectorNotes') + '</div>';
-  contentEl.insertAdjacentHTML('beforebegin', '<p class="text-muted mt-1" style="margin-bottom:0.75rem; font-size:0.85rem;">💾 This is an ongoing register — every change saves automatically as you edit it. There is no Submit/Approve step for this tab.</p>');
+    renderHeaderCell('col-text-long', 'Director Notes', 'Appraisals Meetings', 'DirectorNotes') + '</div>';
 
   items.forEach(function(item) {
     html += '<div class="table-row">';
@@ -72,7 +72,7 @@ async function renderAppraisals(centreId) {
     html += '<div class="col-text-short" data-label="Type"><input type="text" data-row="' + item.rowIndex + '" data-field="AppraisalType" value="' + (item.appraisalType || '') + '" ' + (!canEditDir ? 'disabled' : '') + '></div>';
     html += '<div class="col-date" data-label="Date">' + formatDateAU(item.appraisalDate) + '</div>';
     html += '<div class="col-narrow" data-label="Self-Assess">' + ynSelectHtml(item.rowIndex, 'DirSelfAssess', item.dirSelfAssess, !canEditDir) + '</div>';
-    html += '<div class="col-narrow" data-label="Minutes Published">' + ynSelectHtml(item.rowIndex, 'MinutesPublished', item.minutesPublished, !canEditAdmin) + '</div>';
+    html += '<div class="col-narrow" data-label="Minutes Published">' + ynSelectHtml(item.rowIndex, 'MinutesPublished', item.minutesPublished, !canEditDir) + '</div>';
     html += '<div class="col-text-long" data-label="Mitigation">' + textareaHtml(item.rowIndex, 'DirMitigation', item.dirMitigation, !canEditDir) + '</div>';
     html += '<div class="col-narrow" data-label="Manager Check">' + ynSelectHtml(item.rowIndex, 'ManagerCheck', item.managerCheck, !canEditAdmin) + '</div>';
     html += '<div class="col-text-long" data-label="Manager Notes">' + textareaHtml(item.rowIndex, 'ManagerNotes', item.managerNotes, !canEditAdmin) + '</div>';

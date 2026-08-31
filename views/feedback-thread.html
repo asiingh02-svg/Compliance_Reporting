@@ -4,22 +4,42 @@
     <select id="ft-centre-select"></select>
   </div>
 </div>
-<div class="flex-gap mt-1" style="margin-bottom:1rem;">
-  <select id="ft-filter">
-    <option value="Open">Open</option>
+<div class="flex-gap mt-1" style="margin-bottom:1rem; flex-wrap:wrap;">
+  <select id="ft-status-filter">
+    <option value="OpenDeferred">Open + Deferred</option>
+    <option value="Open">Open only</option>
+    <option value="Deferred">Deferred only</option>
     <option value="Resolved">Resolved (last 3 months)</option>
     <option value="ShowAll">Show All</option>
   </select>
+  <select id="ft-category-filter"><option value="All">All Categories</option></select>
   <button class="btn btn-secondary btn-small" id="ft-add-btn">+ New Entry</button>
 </div>
+<p class="text-muted mt-1" style="margin-bottom:0.75rem; font-size:0.85rem;">💾 Entries save automatically. There is no Submit/Approve step.</p>
 <div id="ft-content"></div>
 
 <script>
+const FEEDBACK_CATEGORY_BADGE_COLORS = ['badge-blue','badge-green','badge-yellow','badge-orange','badge-grey'];
+function categoryBadgeClass(category) {
+  const idx = ftAllCategories.indexOf(category);
+  return FEEDBACK_CATEGORY_BADGE_COLORS[idx % FEEDBACK_CATEGORY_BADGE_COLORS.length] || 'badge-grey';
+}
+
+let ftAllCategories = [];
+
 async function initFeedbackThread() {
   const session = Session.get();
   const isAdmin = session.role === 'Area Manager' || session.role === 'Approved Provider';
   const wrapper = document.getElementById('ft-centre-selector-wrapper');
   let activeCentreId = session.centreId;
+
+  ftAllCategories = await api('getFeedbackCategories');
+  const catSelect = document.getElementById('ft-category-filter');
+  ftAllCategories.forEach(function(c) {
+    const opt = document.createElement('option');
+    opt.value = c; opt.textContent = c;
+    catSelect.appendChild(opt);
+  });
 
   if (isAdmin) {
     wrapper.classList.remove('hidden');
@@ -30,11 +50,11 @@ async function initFeedbackThread() {
     renderFeedback(session.centreId);
   }
 
-  document.getElementById('ft-filter').addEventListener('change', function() { renderFeedback(activeCentreId); });
+  document.getElementById('ft-status-filter').addEventListener('change', function() { renderFeedback(activeCentreId); });
+  document.getElementById('ft-category-filter').addEventListener('change', function() { renderFeedback(activeCentreId); });
 
-  document.getElementById('ft-add-btn').addEventListener('click', async function() {
-    const categories = await api('getFeedbackCategories');
-    let optionsHtml = categories.map(function(c) { return '<option>' + c + '</option>'; }).join('');
+  document.getElementById('ft-add-btn').addEventListener('click', function() {
+    let optionsHtml = ftAllCategories.map(function(c) { return '<option>' + c + '</option>'; }).join('');
     showModal(
       '<h3 class="card-title">New Feedback Entry</h3>' +
       '<div class="form-group"><label>Category</label><select id="ft-category">' + optionsHtml + '</select></div>' +
@@ -54,31 +74,82 @@ async function initFeedbackThread() {
   });
 }
 
+function truncateMessage(msg, len) {
+  if (!msg || msg.length <= len) return { short: msg, isTruncated: false };
+  return { short: msg.substring(0, len) + '…', isTruncated: true };
+}
+
+function statusSelectHtmlFeedback(rowIndex, status) {
+  const options = ['Open', 'Deferred', 'Resolved'];
+  let html = '<select data-row="' + rowIndex + '" data-field="Status">';
+  options.forEach(function(o) { html += '<option value="' + o + '" ' + (status === o ? 'selected' : '') + '>' + o + '</option>'; });
+  return html + '</select>';
+}
+
 async function renderFeedback(centreId) {
   const contentEl = document.getElementById('ft-content');
-  contentEl.insertAdjacentHTML('beforebegin', '<p class="text-muted mt-1" style="margin-bottom:0.75rem; font-size:0.85rem;">💾 Entries save automatically. There is no Submit/Approve step — tick Resolved once a matter is closed.</p>');
   contentEl.innerHTML = '<p class="text-muted">Loading...</p>';
-  const filter = document.getElementById('ft-filter').value;
-  const items = await api('getFeedbackThread', centreId, filter);
+  const statusFilter = document.getElementById('ft-status-filter').value;
+  const categoryFilter = document.getElementById('ft-category-filter').value;
+  const items = await api('getFeedbackThread', centreId, statusFilter, categoryFilter);
 
   if (items.length === 0) { contentEl.innerHTML = '<p class="text-muted">No entries match this filter.</p>'; return; }
 
-  let html = '';
+  let html = '<div class="data-table"><div class="table-header">' +
+    '<div class="col-date">Date</div>' +
+    '<div class="col-text-short">Author</div>' +
+    '<div class="col-narrow">Category</div>' +
+    '<div class="col-text-long">Message</div>' +
+    '<div class="col-date">Action Date</div>' +
+    '<div class="col-narrow">Status</div>' +
+    '<div class="col-date">Resolved Date</div>' +
+    '</div>';
+
   items.forEach(function(item) {
-    const isResolved = item.resolved === true || item.resolved === 'Y' || item.resolved === 'TRUE';
-    html += '<div class="card">';
-    html += '<div class="flex-between"><div><span class="badge badge-blue">' + item.category + '</span> <strong>' + item.author + '</strong> <span class="text-muted">' + formatDateTimeAU(item.dateOfComment) + '</span></div>';
-    html += '<label class="flex-gap" style="font-size:0.85rem;"><input type="checkbox" data-row="' + item.rowIndex + '" data-field="Resolved" ' + (isResolved ? 'checked' : '') + '> Resolved</label></div>';
-    html += '<p class="mt-1">' + item.message + '</p>';
-    html += '<label class="flex-gap" style="font-size:0.85rem;"><input type="checkbox" data-row="' + item.rowIndex + '" data-field="ActionRequired" ' + (item.actionRequired === 'Y' || item.actionRequired === true ? 'checked' : '') + '> Action Required</label>';
+    const t = truncateMessage(item.message, 80);
+    const hasAction = !!item.actionRequired;
+    html += '<div class="table-row">';
+    html += '<div class="col-date" data-label="Date">' + formatDateAU(item.dateOfComment) + '</div>';
+    html += '<div class="col-text-short" data-label="Author">' + item.author + '</div>';
+    html += '<div class="col-narrow" data-label="Category"><span class="badge ' + categoryBadgeClass(item.category) + '">' + item.category + '</span></div>';
+    html += '<div class="col-text-long" data-label="Message">' + t.short +
+      (t.isTruncated ? ' <a href="#" class="ft-show-more" data-full="' + item.message.replace(/"/g, '&quot;') + '">Show more</a>' : '') + '</div>';
+    html += '<div class="col-date" data-label="Action Date">' +
+      (hasAction
+        ? '<span>' + formatDateAU(item.actionRequired) + '</span> <button type="button" class="btn btn-secondary btn-small ft-action-clear" data-row="' + item.rowIndex + '">✕</button>'
+        : '<button type="button" class="btn btn-secondary btn-small ft-action-set" data-row="' + item.rowIndex + '">+ Flag</button>') +
+      '</div>';
+    html += '<div class="col-narrow" data-label="Status">' + statusSelectHtmlFeedback(item.rowIndex, item.status) + '</div>';
+    html += '<div class="col-date" data-label="Resolved Date">' + (item.status === 'Resolved' ? formatDateAU(item.resolvedAt) : '—') + '</div>';
     html += '</div>';
   });
+  html += '</div>';
   contentEl.innerHTML = html;
+
+  contentEl.querySelectorAll('.ft-show-more').forEach(function(a) {
+    a.addEventListener('click', function(e) {
+      e.preventDefault();
+      showModal('<h3 class="card-title">Full Message</h3><p style="white-space:pre-wrap;">' + a.dataset.full + '</p><button class="btn btn-secondary" id="ft-msg-close">Close</button>');
+      document.getElementById('ft-msg-close').addEventListener('click', closeModal);
+    });
+  });
+
+  contentEl.querySelectorAll('.ft-action-set').forEach(function(btn) {
+    btn.addEventListener('click', async function() {
+      await api('saveFeedbackField', centreId, Number(btn.dataset.row), 'ActionRequired', 'SET');
+      renderFeedback(centreId);
+    });
+  });
+  contentEl.querySelectorAll('.ft-action-clear').forEach(function(btn) {
+    btn.addEventListener('click', async function() {
+      await api('saveFeedbackField', centreId, Number(btn.dataset.row), 'ActionRequired', 'CLEAR');
+      renderFeedback(centreId);
+    });
+  });
 
   contentEl.addEventListener('change', function(e) {
     if (!e.target.dataset.field) return;
-    const value = e.target.type === 'checkbox' ? (e.target.checked ? 'Y' : 'N') : e.target.value;
-    api('saveFeedbackField', centreId, Number(e.target.dataset.row), e.target.dataset.field, value).then(function() {
+    api('saveFeedbackField', centreId, Number(e.target.dataset.row), e.target.dataset.field, e.target.value).then(function() {
       renderFeedback(centreId);
     });
   });
