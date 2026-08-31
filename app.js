@@ -489,29 +489,35 @@ function openLocationModal(rowIndex, currentValueRaw, saveFn, onSaved) {
   const otherValues = currentValues.filter(function(v) { return LOCATION_OPTIONS.indexOf(v) === -1; });
   const otherText = otherValues.join(', ');
 
+  const rowStyle = 'display:flex; align-items:flex-start; gap:0.6rem; font-weight:400; margin-bottom:0.6rem; cursor:pointer; width:100%; box-sizing:border-box;';
+  const checkboxStyle = 'flex-shrink:0; margin:0.15rem 0 0 0; width:16px; height:16px;';
+  const textStyle = 'flex:1; min-width:0; white-space:normal; word-wrap:break-word; overflow-wrap:break-word;';
+
   const checkboxesHtml = LOCATION_OPTIONS.map(function(loc) {
     const checked = knownSelected.indexOf(loc) !== -1 ? 'checked' : '';
-    return '<label style="display:flex; align-items:center; gap:0.6rem; font-weight:400; margin-bottom:0.5rem; cursor:pointer;">' +
-      '<input type="checkbox" class="loc-checkbox" value="' + loc + '" ' + checked + ' style="flex-shrink:0; margin:0;">' +
-      '<span>' + loc + '</span>' +
+    return '<label style="' + rowStyle + '">' +
+      '<input type="checkbox" class="loc-checkbox" value="' + loc + '" ' + checked + ' style="' + checkboxStyle + '">' +
+      '<span style="' + textStyle + '">' + loc + '</span>' +
       '</label>';
   }).join('');
 
   showModal(
+    '<div style="max-width:100%; overflow-x:hidden; box-sizing:border-box;">' +
     '<h3 class="card-title">Select Locations</h3>' +
     '<p class="text-muted">Choose all locations that apply.</p>' +
-    '<div style="max-height:280px; overflow-y:auto; margin-bottom:0.75rem; display:flex; flex-direction:column;">' + checkboxesHtml +
-      '<label style="display:flex; align-items:center; gap:0.6rem; font-weight:400; cursor:pointer;">' +
-        '<input type="checkbox" id="loc-others-check" ' + (otherValues.length > 0 ? 'checked' : '') + ' style="flex-shrink:0; margin:0;">' +
-        '<span>Others</span>' +
+    '<div style="max-height:320px; overflow-y:auto; overflow-x:hidden; margin-bottom:0.75rem; width:100%; box-sizing:border-box;">' + checkboxesHtml +
+      '<label style="' + rowStyle + '">' +
+        '<input type="checkbox" id="loc-others-check" ' + (otherValues.length > 0 ? 'checked' : '') + ' style="' + checkboxStyle + '">' +
+        '<span style="' + textStyle + '">Others</span>' +
       '</label>' +
     '</div>' +
-    '<div class="form-group" id="loc-others-group" style="' + (otherValues.length > 0 ? '' : 'display:none;') + '">' +
-      '<label>Please specify</label><input type="text" id="loc-others-text" value="' + otherText.replace(/"/g, '&quot;') + '">' +
+    '<div class="form-group" id="loc-others-group" style="' + (otherValues.length > 0 ? '' : 'display:none;') + ' width:100%; box-sizing:border-box;">' +
+      '<label>Please specify</label><input type="text" id="loc-others-text" value="' + otherText.replace(/"/g, '&quot;') + '" style="width:100%; box-sizing:border-box;">' +
     '</div>' +
     '<div class="flex-gap" style="justify-content:flex-end;">' +
       '<button class="btn btn-secondary" id="loc-cancel">Cancel</button>' +
       '<button class="btn btn-primary" id="loc-confirm">Save</button>' +
+    '</div>' +
     '</div>'
   );
 
