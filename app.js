@@ -491,14 +491,20 @@ function openLocationModal(rowIndex, currentValueRaw, saveFn, onSaved) {
 
   const checkboxesHtml = LOCATION_OPTIONS.map(function(loc) {
     const checked = knownSelected.indexOf(loc) !== -1 ? 'checked' : '';
-    return '<label class="flex-gap" style="font-weight:400; margin-bottom:0.4rem;"><input type="checkbox" class="loc-checkbox" value="' + loc + '" ' + checked + '> ' + loc + '</label>';
+    return '<label style="display:flex; align-items:center; gap:0.6rem; font-weight:400; margin-bottom:0.5rem; cursor:pointer;">' +
+      '<input type="checkbox" class="loc-checkbox" value="' + loc + '" ' + checked + ' style="flex-shrink:0; margin:0;">' +
+      '<span>' + loc + '</span>' +
+      '</label>';
   }).join('');
 
   showModal(
     '<h3 class="card-title">Select Locations</h3>' +
     '<p class="text-muted">Choose all locations that apply.</p>' +
-    '<div style="max-height:280px; overflow-y:auto; margin-bottom:0.75rem;">' + checkboxesHtml +
-      '<label class="flex-gap" style="font-weight:400;"><input type="checkbox" id="loc-others-check" ' + (otherValues.length > 0 ? 'checked' : '') + '> Others</label>' +
+    '<div style="max-height:280px; overflow-y:auto; margin-bottom:0.75rem; display:flex; flex-direction:column;">' + checkboxesHtml +
+      '<label style="display:flex; align-items:center; gap:0.6rem; font-weight:400; cursor:pointer;">' +
+        '<input type="checkbox" id="loc-others-check" ' + (otherValues.length > 0 ? 'checked' : '') + ' style="flex-shrink:0; margin:0;">' +
+        '<span>Others</span>' +
+      '</label>' +
     '</div>' +
     '<div class="form-group" id="loc-others-group" style="' + (otherValues.length > 0 ? '' : 'display:none;') + '">' +
       '<label>Please specify</label><input type="text" id="loc-others-text" value="' + otherText.replace(/"/g, '&quot;') + '">' +
