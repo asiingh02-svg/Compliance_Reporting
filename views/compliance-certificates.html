@@ -72,10 +72,15 @@ async function renderCertificates(centreId) {
   const contentEl = document.getElementById('cert-content');
   contentEl.innerHTML = '<p class="text-muted">Loading...</p>';
   const statusFilter = document.getElementById('cert-status-filter').value;
-  const period = await getCurrentPeriodClient();
 
+  // Fire the period lookup (usually already client-cached after the
+  // first tab load this session) in PARALLEL with the items fetch,
+  // rather than waiting on it first — saves one round-trip on cold start.
+  const periodPromise = getCurrentPeriodClient();
+  const itemsPromise = api('getCertificatesData', centreId, statusFilter, 'All');
+  const period = await periodPromise;
   const [items, headerInfo] = await Promise.all([
-    api('getCertificatesData', centreId, statusFilter, 'All'),
+    itemsPromise,
     api('getTabHeaderInfo', 'Compliance Certificates', centreId, period.periodKey)
   ]);
 
