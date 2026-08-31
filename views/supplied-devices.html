@@ -57,11 +57,11 @@ async function renderDevices(centreId) {
   const items = await api('getSuppliedDevicesData', centreId);
 
   let html = '<div class="data-table"><div class="table-header">' +
-    renderHeaderCell('col-text-short', 'Device', 'Supplied Devices', 'DeviceType') +
-    renderHeaderCell('col-text-short', 'Location', 'Supplied Devices', 'DeviceLocation') +
-    renderHeaderCell('col-date', 'Declared', 'Supplied Devices', 'DeclarationDate') +
-    renderHeaderCell('col-text-short', 'Allocated To', 'Supplied Devices', 'AllocatedTo') +
-    renderHeaderCell('col-date', 'Last Review', 'Supplied Devices', 'LastReviewDate') +
+    renderHeaderCell('col-text-short', 'Device Type', 'Supplied Devices', 'DeviceType') +
+    renderHeaderCell('col-text-short', 'Device Location (eg Room)', 'Supplied Devices', 'DeviceLocation') +
+    renderHeaderCell('col-date', 'Declaration Date', 'Supplied Devices', 'DeclarationDate') +
+    renderHeaderCell('col-text-short', 'Who is it allocated to', 'Supplied Devices', 'AllocatedTo') +
+    renderHeaderCell('col-date', 'Last Review Date', 'Supplied Devices', 'LastReviewDate') +
     renderHeaderCell('col-text-long', 'Comments', 'Supplied Devices', 'Comments') + '</div>';
 
   items.forEach(function(item) {
