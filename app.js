@@ -483,8 +483,6 @@ function managerNotesHtml(rowIndex, value, disabled) {
 
 const LOCATION_OPTIONS = ['Foyer','Kitchen','OWNA','Learning Spaces','Staffroom','Programming Room',"All adult sinks","Children's sinks","Children's Toilets","Nappy Change areas","Bottle Prep Area","All chemical locations","Next to all phones","All exits signs","Evacuation Point","0-2 Room","2-3 room","3-4 room","3-5 room"];
 
-const LOCATION_OPTIONS = ['Foyer','Kitchen','OWNA','Learning Spaces','Staffroom','Programming Room',"All adult sinks","Children's sinks","Children's Toilets","Nappy Change areas","Bottle Prep Area","All chemical locations","Next to all phones","All exits signs","Evacuation Point","0-2 Room","2-3 room","3-4 room","3-5 room"];
-
 function openLocationModal(rowIndex, currentValueRaw, saveFn, onSaved) {
   const currentValues = currentValueRaw ? currentValueRaw.split(',').map(function(s) { return s.trim(); }).filter(Boolean) : [];
   const knownSelected = currentValues.filter(function(v) { return LOCATION_OPTIONS.indexOf(v) !== -1; });
