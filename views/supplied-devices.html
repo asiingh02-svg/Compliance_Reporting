@@ -60,20 +60,22 @@ async function renderDevices(centreId) {
     renderHeaderCell('col-text-short', 'Device Type', 'Supplied Devices', 'DeviceType') +
     renderHeaderCell('col-text-short', 'Device Location (eg Room)', 'Supplied Devices', 'DeviceLocation') +
     renderHeaderCell('col-date', 'Declaration Date', 'Supplied Devices', 'DeclarationDate') +
+    renderHeaderCell('col-text-short', 'Who Declared', 'Supplied Devices', 'WhoDeclared') +
     renderHeaderCell('col-text-short', 'Who is it allocated to', 'Supplied Devices', 'AllocatedTo') +
     renderHeaderCell('col-date', 'Last Review Date', 'Supplied Devices', 'LastReviewDate') +
     renderHeaderCell('col-text-long', 'Comments', 'Supplied Devices', 'Comments') + '</div>';
 
   items.forEach(function(item) {
     html += '<div class="table-row">';
-    html += '<div class="col-text-short" data-label="Device"><strong>' + item.deviceType + '</strong>' + (item.deviceBrand ? '<br><span class="text-muted">' + item.deviceBrand + ' — ' + (item.serialNumber || '') + '</span>' : '') + '</div>';
+    html += '<div class="col-text-short" data-label="Device Type"><strong>' + item.deviceType + '</strong>' + (item.deviceBrand ? '<br><span class="text-muted">' + item.deviceBrand + ' — ' + (item.serialNumber || '') + '</span>' : '') + '</div>';
     html += '<div class="col-text-short" data-label="Location">' +
       '<div class="location-display">' + (item.deviceLocation || 'Not set') + '</div>' +
       '<button type="button" class="btn btn-secondary btn-small location-edit-btn" data-row="' + item.rowIndex + '" data-current="' + (item.deviceLocation || '').replace(/"/g, '&quot;') + '">Edit</button>' +
       '</div>';
-    html += '<div class="col-date" data-label="Declared">' + formatDateAU(item.declarationDate) + '</div>';
-    html += '<div class="col-text-short" data-label="Allocated To">' + (item.allocatedTo || '—') + '</div>';
-    html += '<div class="col-date" data-label="Last Review"><input type="date" data-row="' + item.rowIndex + '" data-field="LastReviewDate" value="' + dateForInput(item.lastReviewDate) + '"></div>';
+    html += '<div class="col-date" data-label="Declaration Date"><input type="date" data-row="' + item.rowIndex + '" data-field="DeclarationDate" value="' + dateForInput(item.declarationDate) + '"></div>';
+    html += '<div class="col-text-short" data-label="Who Declared"><input type="text" data-row="' + item.rowIndex + '" data-field="WhoDeclared" value="' + (item.whoDeclared || '') + '"></div>';
+    html += '<div class="col-text-short" data-label="Allocated To"><input type="text" data-row="' + item.rowIndex + '" data-field="AllocatedTo" value="' + (item.allocatedTo || '') + '"></div>';
+    html += '<div class="col-date" data-label="Last Review Date"><input type="date" data-row="' + item.rowIndex + '" data-field="LastReviewDate" value="' + dateForInput(item.lastReviewDate) + '"></div>';
     html += '<div class="col-text-long" data-label="Comments">' + textareaHtml(item.rowIndex, 'Comments', item.comments, false) + '</div>';
     html += '</div>';
   });
